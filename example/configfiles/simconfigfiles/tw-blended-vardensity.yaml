@@ -1,0 +1,20 @@
+## Catalog arguments
+
+# Use this if you want the same number of images among cases
+ngal: #5117 #number of galaxies per arcmin^2 image (density)
+ngal_min: 1706 #1/3
+ngal_max: 15351 #3x
+ngal_nbins: 8
+#nimgs: 3 #number of images
+
+# Use this if you want the same number of objects per case
+ntotal_gal: 100000 # you can not use nimgs if this is defined
+
+
+imagesize: 4000 #nummber of pixel per side
+#imagesize_min: 2309 #3x gal density
+#imagesize_max: 6928 #1/3 gal density
+#imagesize_nbins: 5
+snc: False #all images correspond to same ngal rotate, if false only the position is conserved
+mode: 'random' #'grid' #'random '#'grid'
+

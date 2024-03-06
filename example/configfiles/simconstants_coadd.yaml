@@ -1,0 +1,9 @@
+## Catalog arguments
+pixel_scale: 0.1                # arcsec/pixel
+realgain: 3.481514250204009     # e/ADU
+gain: 3.717                     # photons/ADU
+exptime: 1695.0                 # seconds 3*565
+ron: 3.3                        # electrons/pix
+skyback: 0.21404                # e-/s (electrons per second) if varsky this will be overwritten
+zeropoint: 25.7                 # 25.3 25.32 #only sersic 
+tru_pixel: -1.0                 # If positive, adds an extra convolution by that many pixels to the simulation process

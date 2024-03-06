@@ -1,0 +1,23 @@
+## List of DEFAULT measurement properties
+##AperturePhotometry
+AutoPhotometry
+##ExternalFlags
+FlexibleModelFitting
+FluxRadius
+##GroupInfo
+##GroupStamp
+##GrowthCurve
+IsophotalFlux
+KronRadius
+##MoffatModelFitting
+##NCorePixel
+NDetectedPixels
+PeakValue
+##PixelBoundaries
+PixelCentroid
+SNRRatio
+ShapeParameters
+##SourceFlags
+##SourceIDs
+##Vignet
+##WorldCentroid

@@ -1,0 +1,71 @@
+X_IMAGE
+Y_IMAGE
+XWIN_IMAGE
+YWIN_IMAGE
+FLUX_APER
+FLUXERR_APER
+FLUX_RADIUS
+NUMBER
+MAG_AUTO
+MAGERR_AUTO
+BACKGROUND
+FWHM_IMAGE
+PETRO_RADIUS
+KRON_RADIUS
+FLUX_WIN                 #Gaussian-weighted flux                                    [count]
+FLUXERR_WIN              #RMS error for WIN flux                                    [count]
+FLUX_AUTO                #Flux within a Kron-like elliptical aperture               [count]
+FLUXERR_AUTO             #RMS error for AUTO flux                                   [count]
+SNR_WIN
+MAG_WIN
+FLAGS
+CLASS_STAR
+ELONGATION
+ELLIPTICITY
+AWIN_IMAGE               #Windowed profile RMS along major axis                     [pixel]
+BWIN_IMAGE               #Windowed profile RMS along minor axis                     [pixel]
+THETAWIN_IMAGE           #Windowed position angle (CCW/x)  			    [deg]
+ERRAWIN_IMAGE            #RMS windowed pos error along major axis                   [pixel]
+ERRBWIN_IMAGE            #RMS windowed pos error along minor axis                   [pixel]
+ERRTHETAWIN_IMAGE        #Windowed error ellipse pos angle (CCW/x)                  [deg]
+CXXWIN_IMAGE             #Windowed Cxx object ellipse parameter                     [pixel**(-2)]
+CYYWIN_IMAGE             #Windowed Cyy object ellipse parameter                     [pixel**(-2)]
+CXYWIN_IMAGE             #Windowed Cxy object ellipse parameter			    [pixel**(-2)]
+ERRCXXWIN_IMAGE          #Cxx windowed error ellipse parameter                      [pixel**(-2)]
+ERRCYYWIN_IMAGE          #Cyy windowed error ellipse parameter                      [pixel**(-2)]
+ERRCXYWIN_IMAGE          #Cxy windowed error ellipse parameter 			    [pixel**(-2)]
+
+
+#X2MODEL_IMAGE            #Variance along x from model-fitting                       [pixel**2]
+#Y2MODEL_IMAGE            #Variance along y from model-fitting                       [pixel**2]
+#XYMODEL_IMAGE            #Covariance between x and y from model-fitting             [pixel**2]
+#ELLIP1MODEL_IMAGE        #Ellipticity component from model-fitting                 
+#ELLIP2MODEL_IMAGE        #Ellipticity component from model-fitting                 
+#POLAR1MODEL_IMAGE        #Ellipticity component (quadratic) from model-fitting     
+#POLAR2MODEL_IMAGE        #Ellipticity component (quadratic) from model-fitting     
+#ELLIP1ERRMODEL_IMAGE     #Ellipticity component std.error from model-fitting       
+#ELLIP2ERRMODEL_IMAGE     #Ellipticity component std.error from model-fitting       
+#ELLIPCORRMODEL_IMAGE     #Corr.coeff between ellip.components from model-fitting   
+#POLAR1ERRMODEL_IMAGE     #Polarisation component std.error from model-fitting      
+#POLAR2ERRMODEL_IMAGE     #Polarisation component std.error from model-fitting      
+#POLARCORRMODEL_IMAGE     #Corr.coeff between polar. components from fitting
+#CXXMODEL_IMAGE           #Cxx ellipse parameter from model-fitting                  [pixel**(-2)]
+#CYYMODEL_IMAGE           #Cyy ellipse parameter from model-fittinh                  [pixel**(-2)]
+#CXYMODEL_IMAGE           #Cxy ellipse parameter from model-fitting                  [pixel**(-2)]
+#FLAGS_MODEL              #Model-fitting flags                                      
+#NITER_MODEL              #Number of iterations for model-fitting                   
+#FLUX_MODEL               #Flux from model-fitting                                   [count]
+#FLUXERR_MODEL            #RMS error on model-fitting flux                           [count]
+#MAG_MODEL                #Magnitude from model-fitting                              [mag]
+#MAGERR_MODEL             #RMS error on model-fitting magnitude                      [mag]
+#FLUX_HYBRID              #Hybrid flux from model-fitting                            [count]
+#FLUXERR_HYBRID           #RMS error on hybrid flux                                  [count]
+#MAG_HYBRID               #Hybrid magnitude from model-fitting                       [mag]
+#MAGERR_HYBRID            #RMS error on hybrid magnitude
+#XMODEL_IMAGE             #X coordinate from model-fitting                           [pixel]
+#YMODEL_IMAGE             #Y coordinate from model-fitting                           [pixel]
+
+#SPREAD_MODEL
+#SPREADERR_MODEL
+#MAG_PSF
+#MAGERR_PSF

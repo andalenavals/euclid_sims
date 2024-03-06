@@ -1,0 +1,14 @@
+## All configuration for sextractor run using psf-fwhm and psf-sampling
+
+#sex_bin: /vol/euclid5/euclid5_raid3/aanavarroa/miniconda3/envs/condaenv3.6/bin/sourcextractor++
+sex_bin: /vol/euclid5/euclid5_raid3/aanavarroa/miniconda3/envs/sourcex-0.17/bin/sourcextractor++
+sex_config: /users/aanavarroa/original_gitrepos/TF_MomentsML_experiments/examples/TF_fullimages_sims-meas/configfiles_const/sexconfigs/constant_psf.conf
+python_config: /users/aanavarroa/original_gitrepos/TF_MomentsML_experiments/examples/TF_fullimages_sims-meas/configfiles_const/sexconfigs/fitting_constpsf.py
+sex_params: /users/aanavarroa/original_gitrepos/TF_MomentsML_experiments/examples/TF_fullimages_sims-meas/configfiles_const/sexconfigs/sex.param
+sex_filter: /users/aanavarroa/original_gitrepos/TF_MomentsML_experiments/examples/TF_fullimages_sims-meas/configfiles_const/sexconfigs/gauss_3.0_7x7.conv
+run_check: False #True #False
+use_psfimg: True
+psf_file: "nopsf"
+skipdone: True
+ext: _galimg.fits #extension of images in simdir to run glob
+catext: _cat.fits #extension of output catalog

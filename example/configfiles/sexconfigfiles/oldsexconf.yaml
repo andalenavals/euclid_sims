@@ -1,0 +1,11 @@
+## All configuration for sextractor run
+
+sex_bin: /vol/software/software/astro/sextractor/bin/sextractor
+sex_config: /users/aanavarroa/original_gitrepos/euclid_sims/example/configfiles/coresexconfigs/vis_sc8.sex
+sex_params: /users/aanavarroa/original_gitrepos/euclid_sims/example/configfiles/coresexconfigs/sex.param
+sex_filter: /users/aanavarroa/original_gitrepos/euclid_sims/example/configfiles/coresexconfigs/conv/gauss_5.0_9x9.conv
+sex_nnw: /users/aanavarroa/original_gitrepos/euclid_sims/example/configfiles/coresexconfigs/sex.nnw
+skipdone: True
+ext: _galimg.fits #extension of images in simdir to run glob
+catext: _cat.fits #extension of output catalog
+checkext: _seg.fits

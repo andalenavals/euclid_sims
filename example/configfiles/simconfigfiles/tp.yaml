@@ -1,0 +1,7 @@
+## Catalog arguments
+ngal: 1024        # number of galaxies per image
+nimgs: 2          # number of images
+imagesize: 4000   # nummber of pixel per side
+snc: True
+mode: 'grid'
+tru_type: 2       # 0 gaussian, 1 Sersic, 2 EBulgeDisk
