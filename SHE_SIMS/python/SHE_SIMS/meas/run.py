@@ -39,12 +39,13 @@ from . import sex
 from . import galsim_adamom
 from . import galsim_ksb
 from . import ngmix
+from ..utils import _run
 
 import logging
 logger = logging.getLogger(__name__)
 
 ###########################
-### RUN ADAMOM on SIM ###
+### RUN KSB on SIM ###
 ###########################
 
 def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galimg', catsdir=None):
@@ -219,11 +220,11 @@ def ksb(simdir, measdir, measkwargs, sexdir=None,catsdir=None, cattype='tru', nc
         if nchunks==0:
                 _run(wslist, ncpu)
         '''
-        _ksbrun(wslist, ncpu)
+        _run(_ksbworker, wslist, ncpu)
         if rot_pair:
                 measkwargs.update({"rot_pair":rot_pair})
                 wslist=makeksbworkerlist(simdir, measdir, sexdir, cattype, measkwargs, ext='_galimg_rot', catsdir=catsdir)     
-                _ksbrun(wslist, ncpu)
+                _run(_ksbworker, wslist, ncpu)
         
 
 class _KSBWorkerSettings():
@@ -268,43 +269,6 @@ def _ksbworker(ws):
 
         endtime = datetime.datetime.now()
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
-
-def _ksbrun(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        if len(wslist)<ncpu:
-                ncpu=len(wslist)
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
-
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the measurement on %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_ksbworker, wslist))
-        
-        else:
-                multiprocessing.freeze_support()
-                pool = multiprocessing.Pool(processes=ncpu)
-                pool.map(_ksbworker, wslist)
-                #pool.close()
-                pool.terminate()
-                pool.join()
-                del pool
-        
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total measurement time was %s" % (str(endtime - starttime)))
-
 
 
 ###########################
@@ -488,11 +452,11 @@ def adamom(simdir, measdir, measkwargs,  sexdir=None, cattype='tru', ncpu=1, ski
         if nchunks==0:
                 _run(wslist, ncpu)
         '''
-        _run(wslist, ncpu)
+        _run(_worker, wslist, ncpu)
         if rot_pair:
                 measkwargs.update({"rot_pair":rot_pair})
                 wslist=makeworkerlist(simdir, measdir, sexdir, cattype,  skipdone,  measkwargs,  ext='_galimg_rot')     
-                _run(wslist, ncpu)
+                _run(_worker, wslist, ncpu)
         
 
 class _AdamomWorkerSettings():
@@ -519,58 +483,16 @@ def _worker(ws):
         np.random.seed()
         
         p = multiprocessing.current_process()
-        logger.info("%s is starting to measure catalog %s with PID %s" % (p.name, str(ws), p.pid))
+        logger.info("%s is starting to measure catalog %s with PID %s" % (p.name, str(ws.cat_img), p.pid))
 
         
         if ws.cat_type=='sex':     
                 galsim_adamom.measure_withsex(ws.imgname, ws.cat_img, weight=ws.weight, filename=ws.filename, **ws.measkwargs )
         else:
-                cat = fitsio.read(ws.cat_img)
-                trucat_img = cat[cat["img_id"]==ws.img_id]
-                galsim_adamom.measure(ws.imgname, trucat_img, weight=ws.weight, filename=ws.filename, **ws.measkwargs)
+                galsim_adamom.measure(ws.imgname, ws.cat_img, ws.img_id, weight=ws.weight, filename=ws.filename, **ws.measkwargs)
 
         endtime = datetime.datetime.now()
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
-
-def _run(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        if len(wslist)<ncpu:
-                ncpu=len(wslist)
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
-
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the measurement on %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_worker, wslist))
-        
-        else:
-                multiprocessing.freeze_support()
-                pool = multiprocessing.Pool(processes=ncpu)
-                #chunksize=len(wslist)//ncpu
-                #pool.imap(_worker, wslist,chunksize)
-
-                pool.map(_worker, wslist)
-                pool.close()
-                #pool.terminate()
-                pool.join()
-                #del pool
-        
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total measurement time was %s" % (str(endtime - starttime)))
-
 
 
 
@@ -712,11 +634,11 @@ def ngmix_meas(simdir, measdir, measkwargs,  sexdir=None, catsdir=None,cattype='
         if not os.path.exists(measdir):
                 os.makedirs(measdir)
         wslist=makengmixworkerlist(simdir, measdir, measkwargs, sexdir, cattype,  skipdone,  ext='_galimg', catsdir=catsdir)
-        _ngmixrun(wslist, ncpu)
+        _run(_ngmixworker, wslist, ncpu)
         if rot_pair:
                 measkwargs.update({"rot_pair":rot_pair})
                 wslist=makengmixworkerlist(simdir, measdir, measkwargs, sexdir, cattype,  skipdone,  ext='_galimg_rot', catsdir=catsdir)     
-                _ngmixrun(wslist, ncpu)
+                _run(_ngmixworker, wslist, ncpu)
   
 class _NgmixWorkerSettings():
         """
@@ -746,39 +668,7 @@ def _ngmixworker(ws):
         endtime = datetime.datetime.now()
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
 
-
-def _ngmixrun(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
-
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the measurement on %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_ngmixworker, wslist))
-        
-        else:
-                pool = multiprocessing.Pool(processes=ncpu)
-                pool.map(_ngmixworker, wslist)
-                pool.close()
-                pool.join()
-        
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total measurement time was %s" % (str(endtime - starttime)))
-        
+   
         
         
 ###########################
@@ -875,7 +765,7 @@ def sextractorpp(simdir, sex_bin=None, sex_config=None, sex_params=None, sex_fil
                         wslist.append(ws)
         
         logger.info("Ready to run Sextractor measurements on %i images." % (len(wslist)))
-        _sexpprun(wslist, ncpu)
+        _run(_sexppworker, wslist, ncpu)
            
 
 class _SexppWorkerSettings():
@@ -916,41 +806,7 @@ def _sexppworker(ws):
         endtime = datetime.datetime.now()
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
 
-
-def _sexpprun(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
-
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the measurement on %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_sexppworker, wslist))
-        
-        else:
-                pool = multiprocessing.Pool(processes=ncpu)
-                pool.map(_sexppworker, wslist)
-                pool.close()
-                pool.join()
-        
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total measurement time was %s" % (str(endtime - starttime)))
-
-
-       
+   
 ###########################
 # RUN SEXTRACTOR ON SIM #
 ###########################
@@ -1032,7 +888,7 @@ def sextractor(simdir, sex_bin, sex_config, sex_params, sex_filter, sex_nnw, ski
                         wslist.append(ws)
         
         logger.info("Ready to run Sextractor measurements on %i images." % (len(wslist)))
-        _sexrun(wslist, ncpu)
+        _run(_sexworker, wslist, ncpu)
    
 class _SexWorkerSettings():
         """
@@ -1068,39 +924,6 @@ def _sexworker(ws):
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
 
 	
-def _sexrun(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
-
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the measurement on %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_sexworker, wslist))
-        else:
-                pool = multiprocessing.Pool(processes=ncpu)
-                pool.map(_sexworker, wslist)
-                pool.close()
-                pool.join()
-        
-                
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total measurement time was %s" % (str(endtime - starttime)))
-
-
 ###########################
 # Clean bad measurements  #
 ###########################

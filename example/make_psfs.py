@@ -7,6 +7,7 @@ import argparse
 import astropy.io.fits as fits
 import numpy as np
 import time
+import SHE_SIMS
 from SHE_PSFToolkit.settings.share import initialise_settings
 from SHE_PSFToolkit.settings import share, config
 from SHE_PSFToolkit.model.state import PSFState
@@ -135,14 +136,18 @@ def make_psfs(configfile, image_save_path, redshiftcat=None,nsamples=2):
     print("Time from beginning to end: ", tend-tstart)
 
 def make_adamom_psf_catalog(allpsffiles, filename):
-
     sed_names=["el_cb2004a_001", "sb2_b2004a_001", "sb3_b2004a_001", "sbc_cb2004a_001", "scd_cb2004a_001"]
     data=[]
-    for f in allpsffiles:
+    psf_path=os.path.dirname(allpsffiles[0])
+    psf_files=[os.path.basename(a) for a in allpsffiles]
+    for f in psf_files:
         logger.info("Fitting %s"%(f))
+    
         sed=[i for i,e in enumerate(sed_names) if e in f][0]
 
-        with fits.open(f) as hdul:
+        psfname=os.path.join(psf_path,f)
+        assert os.path.isfile(psfname)
+        with fits.open(psfname) as hdul:
             img_array=hdul[1].data
             hdul.close()
         img=galsim.Image(img_array, xmin=0, ymin=0)
@@ -155,6 +160,13 @@ def make_adamom_psf_catalog(allpsffiles, filename):
             data.append([f]+adamom_list)
             logger.info("Unable to measure %s"%(f))
             raise  # skip to next stamp !
+
+        try:
+            moments=SHE_SIMS.meas.highermoments.get_moments(img)
+            momentsnames=["flux","x","y","g1", "g2", "size","sigma", "M4_1", "M4_2","rho4"]
+        except:
+            logger.debug("Higher moments measure failed", exc_info = True)
+            raise 
 
         x_field=hdul[1].header["X_FIELD"]
         y_field=hdul[1].header["Y_FIELD"]
@@ -175,25 +187,34 @@ def make_adamom_psf_catalog(allpsffiles, filename):
         ada_rho4 = res.moments_rho4
             
         adamom_list=[ada_flux, ada_g1, ada_g2, ada_sigma, ada_rho4]
-        data.append([f,quadrant, ccd, sed]+[x_field, y_field]+toolkit_meas+ adamom_list)
+        data.append([f,quadrant, ccd, sed]+[x_field, y_field]+toolkit_meas+ adamom_list+ moments)
 
     #fits numpy ndarray 
     fields = ["flux", "g1", "g2", "sigma", "rho4"]
-    names =  ["psf_file", "quadrant", "ccd", "sed"]+["X_FIELD", "Y_FIELD","e1","e2","R2","z"]+[ "%s%s"%("psf_adamom_", n) for n in fields ]
-    formats = ['U200', 'i4', 'i4','i4' ]+['f4']*6 +['f4']*(len(fields))
+    names =  ["psf_file", "quadrant", "ccd", "sed"]+["X_FIELD", "Y_FIELD","e1","e2","R2","z"]+[ "%s%s"%("psf_adamom_", n) for n in fields ]+[ "%s%s"%("psf_mom_", n) for n in momentsnames ]
+    formats = ['U200', 'i4', 'i4', 'i4']+['f4']*6 +['f4']*(len(fields)+len(momentsnames))
     dtype = dict(names = names, formats=formats)
     outdata = np.recarray( (len(data), ), dtype=dtype)
     for i, key in enumerate(names):
         outdata[key] = (np.array(data).T)[i]
+
+    #constant
+    names_const=['psf_path']
+    formats_const=['U200']
+    dtype_const = dict(names = names_const, formats=formats_const)
+    dtype_const = dict(names = names_const, formats=formats_const)
+    outdata_const = np.recarray( (1, ), dtype=dtype_const)
+    outdata_const["psf_path"]=psf_path
+
     
     if filename is not None:
         prihdu=fits.PrimaryHDU()
         table = fits.BinTableHDU( outdata)
-        hdulist = fits.HDUList([prihdu,table])
+        tablecons=fits.BinTableHDU( outdata_const)
+        hdulist = fits.HDUList([prihdu,table,tablecons])
         hdulist.writeto(filename, overwrite = True)
         logger.info("Image written to: %s \n "%(filename))
         hdulist.close()
-
 
 def get_redshift_samples(catname, nsamples):
     with fits.open(catname) as hdul:

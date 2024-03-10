@@ -1,28 +1,3 @@
-#
-# Copyright (C) 2012-2020 Euclid Science Ground Segment
-#
-# This library is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Founddation; either version 3.0 of the License, or (at your option)
-# any later version.
-#
-# This library is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this library; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-#
-
-"""
-File: python/SHE_KerasML/utils.py
-
-Created on: 10/12/19
-Author: Malte Tewes
-"""
-
 import logging
 import numpy as np
 import pandas as pd
@@ -31,8 +6,63 @@ import json
 import astropy.table
 import pickle
 from astropy.io import fits
+import multiprocessing
+import datetime
+
 
 logger = logging.getLogger(__name__)
+
+
+
+def open_fits(filename, hdu=1):
+    logger.debug("trying to read %s"%(filename))
+    assert os.path.isfile(filename)
+    try:
+        with fits.open(filename) as hdul:
+            hdul.verify('fix')
+            cat=hdul[hdu].data
+            cat = cat.astype(cat.dtype.newbyteorder('='))
+            return pd.DataFrame(cat)
+    except Exception as e:
+        logger.info("Unable to read existing measurement catalog %s, redoing it"%(filename))
+        logger.info(str(e))
+        if os.path.exists(filename):
+            logger.info("removing %s"%(filename))
+            #os.remove(meascatpath)
+            raise
+
+def _run(workerfunction, wslist, ncpu):
+        """
+        Wrapper around multiprocessing.Pool with some verbosity.
+        """
+        
+        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
+                logger.info("No images to measure.")
+                return
+
+        if ncpu == 0:
+                try:
+                        ncpu = multiprocessing.cpu_count()
+                except:
+                        logger.warning("multiprocessing.cpu_count() is not implemented!")
+                        ncpu = 1
+        
+        starttime = datetime.datetime.now()
+        
+        logger.info("Starting the drawing of %i images using %i CPUs" % (len(wslist), ncpu))
+        
+        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
+                list(map(workerfunction, wslist))
+        
+        else:
+                pool = multiprocessing.Pool(processes=ncpu)
+                pool.map(workerfunction, wslist)
+                pool.close()
+                pool.join()
+        
+        endtime = datetime.datetime.now()
+        logger.info("Done, the total running time was %s" % (str(endtime - starttime)))
+
 
 def shapeit(cat, cols):
     """
@@ -58,43 +88,28 @@ def get3Ddata_constimg(cat, features_cols, targets_cols=None):
         targets= targets[:,:1,:]
         return features, targets
     return features
-
-
-def write_fit(data, file_name, clobber=True):
-    import fitsio
-    from fitsio import FITS,FITSHDR
  
-    if not os.path.isfile(file_name) :
-        #clobber false to not delete existing file
-        fitsio.write(file_name,  data, clobber=clobber)
-    else:
-        # appending data to a new header
-        fits = FITS(file_name,'rw')
-        fits[-1].append(data)
-    
-        
-def makepicklecat(filename, typecat="tp", picklefilename=None):
+# The functions below are just for memory optimization you do not want to keep all the         
+def makepicklecat(filename, typecat="tp", picklefilename=None, matchpairs=True,):
+    from .variables import GALCOLS,SEXFEATS,PSFCOLS,MEASCOLS,MATCHCOLS,NEISCOLS,COLS1D,COLS2D,neicols_tru,neicols_sex,neicols_ada
     #get3Ddata_constimg was taking to much time it is more efficient to save the astropy table pickle
     '''
     typecat: type of catalog. It can be 'tp' or 'tw'
     '''
     logger.info("Making pickle catalog")
-
-    SEXFEATS=["ELONGATION","AWIN_IMAGE", "BWIN_IMAGE" , "THETAWIN_IMAGE", "ERRAWIN_IMAGE", "ERRBWIN_IMAGE", "ERRTHETAWIN_IMAGE" , "CXXWIN_IMAGE", "CYYWIN_IMAGE", "CXYWIN_IMAGE", "ERRCXXWIN_IMAGE", "ERRCYYWIN_IMAGE", "ERRCXYWIN_IMAGE" ]+["ELONGATION_WIN", "ELLIP_WIN", "ELLIP1_WIN","ELLIP2_WIN","ELLIP_AREA","FLUX_WIN","FLUXERR_WIN"]+["X_IMAGE", "Y_IMAGE", "MAG_AUTO", "MAGERR_AUTO","MAG_WIN","SNR_WIN", "FLAGS","FWHM_IMAGE", "MAG_PSF", "PETRO_RADIUS", "KRON_RADIUS",  "SPREADERR_MODEL", "CLASS_STAR", "FLUX_RADIUS"]
-
-    PREDS=["pre_s1", "pre_s2","pre_s1w", "pre_s2w","pre_s1_var", "pre_s2_var" ]+['s1_pred', 's2_pred', 'w1_pred', 'w2_pred', 'm1_pred', 'm2_pred']
-    NEIS=np.concatenate([["fracpix%i"%(i),"fracpix_md%i"%(i)] for i in [10,15,20,25,30]]).tolist() +["mpix",  "fracpix", "fracpix_md","r_nmpix", 'galseg_area','obj_number', "gal_density"]
-    MEAS=["adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4", "x", "y"]]+["skymad","snr"]+['psf_g1_ksb', 'psf_sigma_ksb', 'psf_g2_ksb']+["corr_s1","corr_s2"]+["ngmix_dx", "ngmix_dy","ngmix_e1", "ngmix_e2", "ngmix_T", "ngmix_flux" ]+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,""), "ngmix_%s_%s%s"%("fit",f,"corr")] for f in ["flags","T","T_err","s2n","g1","g2","g1_err","g2_err"]]).tolist()+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,"")] for f in ["flux","flux_err"]]).tolist()
     
+    
+    PREDS=["pre_s1", "pre_s2","pre_s1w", "pre_s2w","pre_s1_var", "pre_s2_var" ]+['s1_pred', 's2_pred', 'w1_pred', 'w2_pred', 'm1_pred', 'm2_pred']
+  
     if (typecat=="tp"):
-        cols1d = ["tru_s1", "tru_s2", "tru_g", "tru_rad", "tru_sb", "tru_sersicn", "tru_flux", "tru_gal_density", "tru_mag", "tru_sky_level"] +[ "cat_id","fov_pos"]+["psf_adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4"] ]+["e1", "e2", "R2", "ccd", "quadrant", "z", "sed"]+[ "%s%s"%("psf_mom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4", "M4_1","M4_2"]]+ ["tru_bulge_flux","tru_disk_flux", "tru_disk_rad","tru_bulge_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"] + ["ws_true", "wi_true"]
-        cols2d = ["x","y", "tru_g1", "tru_g2", "tru_theta"] +["flag","img_id"]+["r_n1", "adamom_flux_n1","adamom_sigma_n1"]+["r_n1_D_fracpix"]+["subcase_id", "ICS", "ICS2"] + SEXFEATS + PREDS + NEIS+ MEAS
+        cols1d = COLS1D +[ "cat_id"]+PSFCOLS + ["ws_true", "wi_true"] + GALCOLS
+        cols2d = COLS2D +["flag","img_id"]+["subcase_id", "ICS", "ICS2"] + SEXFEATS + PREDS + NEIS+ MEASCOLS
     if (typecat=="tw"):
-        cols1d=["tru_s1", "tru_s2", "tru_gal_density", "tru_sky_level"] + ["cat_id","fov_pos"]+["psf_adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4"] ]+["e1", "e2", "R2", "ccd", "quadrant", "z", "sed"]+[ "%s%s"%("psf_mom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4", "M4_1","M4_2"]]
-        cols2d=["tru_g", "tru_rad", "tru_sb", "tru_mag" ,"tru_sersicn", "tru_flux", "x","y", "tru_g1", "tru_g2", "tru_theta", "real_obj_id", "flag", "obj_id", "img_id"]+["tru_bulge_g","tru_theta", "tru_bulge_g1", "tru_bulge_g2", "tru_bulge_flux", "tru_bulge_sersicn", "tru_bulge_rad", "tru_disk_flux", "tru_disk_rad", "tru_disk_inclination", "tru_disk_scaleheight", "dominant_shape"]+["subcase_id", "ICS", "ICS2"]+["tru_r_n1", "tru_r_n2"]+["tru_flux_n1","tru_rad_n1", "tru_mag_n1"]+["tru_flux_n2","tru_rad_n2", "tru_mag_n2"]+["SEX_R_n1", "SEX_R_n2", "SNR_WIN_n1", "SNR_WIN_n2", "MAG_AUTO_n1", "MAG_AUTO_n2"]+["adamom_r_n1", "adamom_flux_n1", "adamom_sigma_n1"]+["adamom_r_n2", "adamom_flux_n2", "adamom_sigma_n2"]+["tru_rad_match", "tru_mag_match", "tru_r_n1_match", "r_match"] + SEXFEATS + PREDS + NEIS + MEAS
-        # tru_gal_density is 2d only because the selection is done by realization so we need 2d for plots (or training) 
+        cols1d=COLS1D + ["cat_id"] +PSFCOLS
+        cols2d=COLS2D+["real_obj_id", "flag", "obj_id", "img_id"]+GALCOLS+["subcase_id", "ICS", "ICS2"]+MATCHCOLS + SEXFEATS + PREDS + NEISCOLS + MEASCOLS +neicols_sex+neicols_ada+neicols_tru
+        # tru_gal_density is 2d only because the selection is done by realization so we need 2d for plots (or training)
         
-    picklecat(filename, cols1d=cols1d, cols2d=cols2d,picklefilename=picklefilename,typecat=typecat)
+    picklecat(filename, cols1d=cols1d, cols2d=cols2d,picklefilename=picklefilename, matchpairs=matchpairs, typecat=typecat)
    
 def picklecat(filename, cols1d=None, cols2d=None,picklefilename=None, matchpairs=True,typecat=None):
     #get3Ddata_constimg was taking to much time it is more efficient to save the astropy table pickle
@@ -150,4 +165,25 @@ def picklecat(filename, cols1d=None, cols2d=None,picklefilename=None, matchpairs
         filename=picklefilename.replace(os.path.splitext(picklefilename)[1], "_matchpairs.pkl")
         with open(filename, 'wb') as handle:
             pickle.dump(vocat, handle, -1)
+
+def get_cols1d_cols2d_extracols(typegroup, cattype, meastype='adamom'):
+    from .variables import GALCOLS,SEXFEATS,PSFCOLS,MEASCOLS,MATCHCOLS,NEISCOLS,COLS1D,COLS2D,neicols_tru,neicols_sex,neicols_ada    
+    if (typegroup =='tp'):
+        cols1d = COLS1D+GALCOLS + PSFCOLS 
+        if cattype=='tru':
+            extracols=COLS2D+ neicols_tru
+        if cattype=='sex':
+            extracols= SEXFEATS + neicols_sex+COLS2D
+    if (typegroup =='tw'):
+        cols1d=COLS1D + PSFCOLS
+        tru_cols2d=[ "obj_id", "ics"]+COLS2D+ GALCOLS
+        if cattype=='tru':
+            extracols=tru_cols2d+ neicols_tru
+        if cattype=='sex':
+            extracols=tru_cols2d+SEXFEATS+neicols_sex +["ICS2"]
+            
+    cols2d = MEASCOLS+NEISCOLS+neicols_ada+ extracols+MATCHCOLS
+    return cols1d, cols2d, extracols
+ 
+
 

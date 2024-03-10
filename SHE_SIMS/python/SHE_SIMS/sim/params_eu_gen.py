@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import random
 import astropy.io.fits as fits
 import copy
@@ -408,14 +409,17 @@ def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constant
                 }
         return out
 
-def draw_sample_star(nsamples, flux_list=None, psf_files=None):
-        if flux_list is not None:
-                psf_flux=np.random.choice(flux_list, size=nsamples)
-        else:
-                psf_flux=[]
-        out = {"psf_flux":psf_flux ,
-               "psf_file":np.random.choice(psf_files, size=nsamples),
-               }
+def draw_sample_star(nsamples, sourcecat=None, constants=None):
+        exptime=constants["exptime"]
+        gain=constants["gain"]
+        zeropoint=constants["zeropoint"]
+        with fits.open(sourcecat) as hdul:
+                cat=hdul[1].data
+                hdul.close()
+        row = np.random.choice(cat, size=nsamples)
+        tru_mag = row["tru_mag"]
+        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
+        out={"star_flux":tru_flux, "star_mag":tru_mag} 
         return out
 
 def draw_s(max_shear):

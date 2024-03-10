@@ -6,11 +6,11 @@ This should be use for training weights only
 
 import numpy as np
 from numpy.lib.recfunctions import append_fields
-import pandas as pd
 import copy
+import pandas as pd
 from . import params_eu_gen
 from .. import calc
-from .. import utils
+from ..utils import open_fits, _run
 import logging
 import os
 import datetime
@@ -31,11 +31,7 @@ from momentsml.tools.feature import Feature
 profiles=["Gaussian", "Sersic", "EBulgeDisk"]
 
 def drawsourceflagshipcat(sourcecat, catpath,  plotpath=None):
-        with fits.open(sourcecat) as hdul:
-                cat=hdul[1].data
-                cat=pd.DataFrame(cat.astype(cat.dtype.newbyteorder('=')))
-                hdul.close()
-        print(cat)
+        cat=open_fits(sourcecat)
         cat["tru_mag"]=-2.5*np.log10(cat["euclid_vis"]) - 48.6
 
         keepcols=["true_redshift_gal", "tru_mag", "bulge_r50", "bulge_nsersic", "bulge_ellipticity", "disk_r50", "disk_ellipticity", "inclination_angle", "gamma1", "gamma2", "dominant_shape", "disk_angle", "bulge_fraction", "disk_scalelength", "bulge_axis_ratio"]
@@ -55,7 +51,7 @@ def drawsourceflagshipcat(sourcecat, catpath,  plotpath=None):
         fitsio.write(catpath, cat, clobber=True)
         
 
-def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min=5, nstar_max=20, nstar_nbins=5, nimgs=None, ntotal_gal=None,  imagesize=None,  snc=True, mode='grid', tru_type=2, constants=None, dist_type='flagship',sourcecat=None, starsourcecat=None, psf_files=None, usevarpsf=False, sky_vals=None,fixorientation=False, max_shear=0.05, filename=None,  ):
+def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min=5, nstar_max=20, nstar_nbins=5, nimgs=None, ntotal_gal=None,  imagesize=None,  snc=True, mode='grid', tru_type=2, constants=None, dist_type='flagship',sourcecat=None, starsourcecat=None, psfsourcecat=None, usevarpsf=False, sky_vals=None,fixorientation=False, max_shear=0.05, filename=None,  ):
         '''
         ngal: number of galaxies per image
         nstars: number of stars per image
@@ -67,6 +63,7 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
         if ngal is None:
                 ngal = params_eu_gen.draw_ngal(nmin=ngal_min, nmax=ngal_max, nbins=ngal_nbins)
                 logger.info("Galaxy density %i"%(ngal))
+        assert ngal>0
         if nstar is None:
                 nstar = params_eu_gen.draw_ngal(nmin=nstar_min, nmax=nstar_max, nbins=nstar_nbins)
                 logger.info("Star density density %i"%(nstar))
@@ -87,15 +84,21 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
         if snc: snc_type = nreas
         else: snc_type = 0
         constants["snc_type"]=snc_type
-        constants["psf_path"]=os.path.dirname(psf_files[0])
-
-        psf_files=[os.path.basename(a) for a in psf_files]
+        
         profile_type=profiles[tru_type]
         shear_pars= params_eu_gen.draw_s(max_shear=max_shear)
+
+        
+        psfdata=fitsio.read(psfsourcecat)
+        psfdataconst=fitsio.read(psfsourcecat, ext=2)
+        constants["psf_path"]=psfdataconst["psf_path"][0]
         if usevarpsf:
-                psf_file= np.random.choice(psf_files)
+                psfinfo= list(np.random.choice(psfdata))
         else:
-                psf_file= psf_files[0]
+                psfinfo= list(psfdata[0])
+
+        psfnames=list(psfdata.dtype.names)
+        psfformats=[ e[1] for e in psfdata.dtype.descr]
                 
         if sky_vals is not None:
                 sky=np.random.choice(sky_vals)/565.0 #the catalog with skyback is in electros for 565 s exposure
@@ -107,14 +110,14 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                 constants.update({"sky_level":tru_sky_level})
 
         #Constants
-        names_const =  ['tru_gal_density', 'tru_ngals', 'imagesize', 'nimgs', 'tru_type'] +list(shear_pars.keys())+list(constants.keys())+['psf_file']
-        formats_const = ['f4', 'i4','i4', 'i4', 'i4'] + [type(shear_pars[k]) for k in shear_pars.keys()]+[type(constants[k]) for k in constants.keys()]+['U100']
+        names_const =  ['tru_gal_density', 'tru_ngals', 'imagesize', 'nimgs', 'tru_type'] +list(shear_pars.keys())+list(constants.keys())+psfnames
+        formats_const = ['f4', 'i4','i4', 'i4', 'i4'] + [type(shear_pars[k]) for k in shear_pars.keys()]+[type(constants[k]) for k in constants.keys()]+psfformats
         formats_const=[e if (e!=str)&(e!=np.str_) else 'U200' for e in formats_const]
-        values_const=[ngal/(imagesize**2),ngal, imagesize, nimgs, tru_type] + [shear_pars[k] for k in shear_pars.keys()]+[constants[k] for k in constants.keys()]+[psf_file]
+        values_const=[ngal/(imagesize**2),ngal, imagesize, nimgs, tru_type] + [shear_pars[k] for k in shear_pars.keys()]+[constants[k] for k in constants.keys()]+psfinfo
 
         #For training point estimates
         x_list=[]; y_list=[]
-        if (snc):
+        if (snc)&(ngal>0):
                 sncrot = 180.0/float(nreas) #rot angle
                 logger.info("Drawing a catalog of %i SNC version of the same galaxy distributed on %i images ..." %(nreas, nimgs))
 
@@ -136,14 +139,15 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                         x_list_star, y_list_star=params_eu_gen.draw_position_sample(nreas_star, imagesize, ngals=nstar, mode=mode)
 
                 gal= params_eu_gen.draw_sample(nreas,tru_type=tru_type,  dist_type=dist_type, sourcecat=sourcecat, constants=constants)
-                star= params_eu_gen.draw_sample_star(nreas_star, flux_list=starsourcecat, psf_files=psf_files )
-                if starsourcecat is None:
-                        if nstar==ngal:
-                                star["psf_flux"]=gal["tru_flux"]
-                                star["psf_mag"]=gal["tru_mag"]
-                        else:
-                                star= params_eu_gen.draw_sample_star(nreas_star, flux_list=gal["tru_flux"], psf_files=psf_files )
-                                
+                if (nstar>0): star= params_eu_gen.draw_sample_star(nreas_star, sourcecat=sourcecat, constants=constants )
+        
+                if nstar==ngal:
+                        star["star_flux"]=gal["tru_flux"]
+                        star["star_mag"]=gal["tru_mag"]
+             
+
+                #print(star)
+                #assert False
         
         
         #Variable data
@@ -177,15 +181,15 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
         else:
                 dtype_const = dict(names = names_const, formats=formats_const)
                 outdata_const = np.recarray( (1, ), dtype=dtype_const)
-
-                gal_names=list(gal.keys())
-                gal_formats=[type(gal[g][0]) for g in gal_names]
-                dtype_var = dict(names = names_var+gal_names,
-                                 formats=formats_var+gal_formats)
-                outdata_var = np.recarray((len(x_list), ), dtype=dtype_var)
+                if ngal>0:
+                        gal_names=list(gal.keys())
+                        gal_formats=[type(gal[g][0]) for g in gal_names]
+                        dtype_var = dict(names = names_var+gal_names,
+                                         formats=formats_var+gal_formats)
+                        outdata_var = np.recarray((len(x_list), ), dtype=dtype_var)
                 
-                for key in gal_names:
-                        outdata_var[key] = gal[key]
+                        for key in gal_names:
+                                outdata_var[key] = gal[key]
 
                 if nstar>0:
                         star_names=list(star.keys())
@@ -196,7 +200,6 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                         outdata_star = np.recarray((len(x_list_star), ), dtype=dtype_star)
 
                         for key in star_names:
-                                print(key, len(outdata_star[key]), len(star[key]))
                                 outdata_star[key] = star[key]
                                 assert len(star[key])==len(x_list_star)
                         outdata_star["x"]=x_list_star
@@ -212,19 +215,22 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
 
         for i, key in enumerate(names_const):
                 outdata_const[key] = values_const[i]
-        outdata_var["x"]=x_list
-        outdata_var["y"]=y_list
-        outdata_var['img_id']=np.concatenate([ [k]*ngal for k in range(nimgs) ])
-        outdata_var['obj_id']=[i for i in range(ngal)]*nimgs
-        
+
+        if ngal>0:
+                outdata_var["x"]=x_list
+                outdata_var["y"]=y_list
+                outdata_var['img_id']=np.concatenate([ [k]*ngal for k in range(nimgs) ])
+                outdata_var['obj_id']=[i for i in range(ngal)]*nimgs
 
         if filename is not None:
-                fitsio.write(filename, outdata_var, clobber=True)
-                #Write constants in the second header
-                fitsio.write(filename, outdata_const, clobber=False)
-                if nstar>0:
-                        fitsio.write(filename, outdata_star, clobber=False)      
+                hdul=[fits.PrimaryHDU(header=fits.Header())]
+                hdul.insert(1, fits.BinTableHDU(outdata_var))
+                hdul.insert(2, fits.BinTableHDU(outdata_const))
+                if nstar>0: hdul.insert(3, fits.BinTableHDU(outdata_star))
+                hdulist = fits.HDUList(hdul)
+                hdulist.writeto(filename, overwrite=True)
                 logger.info("catalog %s written"%(filename))
+
 
        
 def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True):
@@ -473,25 +479,13 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
 
         if starcatalog is not None:
+                logger.debug("Including STARS in sims")
+                
                 for row in starcatalog:
-                        '''
-                        if pixel_conv: 
-                                logger.info("Using PSF core image without pixel response")
-                        else:
-                                logger.info("Using PSF core image with pixel response")
-                        '''
-
-                        psffilename=os.path.join(const_cat["psf_path"][0],row["psf_file"])
-                        assert os.path.isfile(psffilename)
-                        with fits.open(psffilename) as hdul:
-                                psfarray=hdul[1].data
-                        psfarray_shape=psfarray.shape
-                        psfimg=galsim.Image(psfarray, xmin=0,ymin=0)
-                        psfimg.setOrigin(0,0)
-
-                        psf = galsim.InterpolatedImage( psfimg, flux=row["psf_flux"], scale=psfpixelscale, gsparams=gsparams )
-                        psf.image.setOrigin(0,0)
-
+                        #psf = galsim.InterpolatedImage( psfimg, flux=row["star_flux"], scale=psfpixelscale, gsparams=gsparams )
+                        #psf.image.setOrigin(0,0)
+                        psf=psf.withFlux(row["star_flux"])
+                        
                         xjitter = vispixelscale*(ud() - 0.5) 
                         yjitter = vispixelscale*(ud() - 0.5)
                         psf = psf.shift(xjitter,yjitter)
@@ -637,11 +631,11 @@ def multi(workdir, drawcatkwargs, drawimgkwargs, ncat=1, ncpu=1, skipdone=False,
         if rot_pair:
                 drawimgkwargs.update({"rot_pair":True})
                 wslist= makeworkerlist(workdir, catalogs, basename_list, drawimgkwargs, skipdone, ext='_galimg_rot.fits', strongcheck=strongcheck)
-                _run(wslist, ncpu)
+                _run(_worker, wslist, ncpu)
                 
         drawimgkwargs.update({"rot_pair":False})
         wslist= makeworkerlist(workdir, catalogs, basename_list, drawimgkwargs, skipdone,  ext='_galimg.fits', strongcheck=strongcheck)
-        _run(wslist, ncpu)
+        _run(_worker, wslist, ncpu)
 
                         
         
@@ -683,40 +677,6 @@ def _worker(ws):
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
 
 
-def _run(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
-
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the drawing of %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_worker, wslist))
-        
-        else:
-                pool = multiprocessing.Pool(processes=ncpu)
-                pool.map(_worker, wslist)
-                pool.close()
-                pool.join()
-        
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total running time was %s" % (str(endtime - starttime)))
-
-
-
 def transformtogrid(inputdir, outputdir, drawcatkwargs):
         catalogs= sorted(glob.glob(os.path.join(inputdir, "*_cat.fits")))
         assert len(catalogs)>0
@@ -727,18 +687,16 @@ def transformtogrid(inputdir, outputdir, drawcatkwargs):
         
 def fromrandomtogrid(inputcat, drawcatkwargs, outputcatname=None):
         logger.info("Replacing in a grid %s"%(inputcat))
-        incat=fitsio.read(inputcat)
-        incat_df = pd.DataFrame(incat.astype(incat.dtype.newbyteorder('=')))
-        constcat=fitsio.read(inputcat, ext=2)
-        constcat_df=pd.DataFrame(constcat.astype(constcat.dtype.newbyteorder('=')))
-        nimgs=constcat['nimgs'][0]
+        incat_df=open_fits(inputcat)
+        constcat_df=open_fits(inputcat,hdu=2)
+        nimgs=constcat_df['nimgs'][0]
 
         ngal= drawcatkwargs['ngal']
         imagesize=drawcatkwargs['imagesize']
         assert ngal is not None
         assert imagesize is not None
 
-        ntotalgal=len(incat)
+        ntotalgal=len(incat_df)
         nimgs=ntotalgal//ngal
         res=ntotalgal%ngal
         if res>0:
@@ -770,11 +728,8 @@ def update_psf_sky(inputdir, outputdir, drawcatkwargs):
         assert len(catalogs)>0
         outcatalogs=[os.path.join(outputdir, os.path.basename(cat).replace("_cat.fits","update_cat.fits")) for cat in catalogs]
         for icat, ocat in zip(catalogs,outcatalogs):
-                incat=fitsio.read(icat)
-                incat_df = pd.DataFrame(incat.astype(incat.dtype.newbyteorder('=')))
-                constcat=fitsio.read(icat, ext=2)
-                constcat_df=pd.DataFrame(constcat.astype(constcat.dtype.newbyteorder('=')))
-
+                incat_df=open_fits(icat)
+                constcat_df=open_fits(icat, hdu=2)
                 psf_files=drawcatkwargs['psf_files']
                 sky_vals=drawcatkwargs['sky_vals']
                 const_type=drawcatkwargs['const_type']

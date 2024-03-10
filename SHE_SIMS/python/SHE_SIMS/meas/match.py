@@ -14,68 +14,106 @@ import copy
 import datetime
 import multiprocessing
 from .. import calc
+from ..utils import open_fits, _run
 
 import logging
 logger = logging.getLogger(__name__)
 
-def measfct_linear(measdir, inputdir, cols=[], ext='_galimg_meascat.fits', xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="_match", rot_pair=False, ncpu=1):
+def stars(measdir, inputdir, threshold=1.5, ext='_galimg_meascat.fits', xname ='X_IMAGE', yname='Y_IMAGE', ncpu=1, skipdone=False):
         
         """
         measdir: directory with the folder containing catalogs of measured properties
         inputdir: directory containing input catalogs (must contain x, y)
         cols: measured cols to add to the catalog, not need to specify distance it will be default
+        threshold: maximum allowed divergence in the matching of catalogs
         """
         
         logger.info("Starting matching with input catalog")
         
         detectdirs=sorted(glob.glob(os.path.join(measdir,'*_img') ))      
-
+        wslist=[]
         for ddir in detectdirs:
                 basename=os.path.basename(ddir).replace("_img", "")
                 inputcatname=os.path.join(inputdir, '%s%s'%(basename, '_cat.fits'))
-                incat=fitsio.read(inputcatname)
-                incat= incat.astype(incat.dtype.newbyteorder('='))
-                incat = pd.DataFrame(incat)
+                incat=open_fits(inputcatname, hdu=3)
                 nimgs=max(incat["img_id"])+1
 
-
-                if rot_pair:
-                        logger.info("Matching rotated 90 degrees measurements")
-                        sncrot=90
-                        aux1,aux2=np.vectorize(calc.rotg)(incat["tru_g1"],incat["tru_g2"],sncrot)
-                        incat["tru_g1"]=aux1
-                        incat["tru_g2"]=aux2
-                
                 for img_id in range(nimgs):
                         detectcatname=os.path.join(ddir,'%s_img%i%s'%(basename, img_id ,'%s'%(ext)))
                         logger.info("Matching %s"%(detectcatname))
-                        try:
-                                with fits.open(detectcatname) as hdul:
-                                        hdul.verify('fix')
-                                        dcat=hdul[1].data
-                                        dcat= dcat.astype(dcat.dtype.newbyteorder('='))
-                                        dcat = pd.DataFrame(dcat)
-                        except Exception as e:
-                                logger.info("Failed reading sextractor catalog %s removing it"%(detectcatname))
-                                logger.info(str(e))
-                                if os.path.isfile(detectcatname):
-                                        os.remove(detectcatname)
-                                continue
+                        dcat=open_fits(detectcatname)
+                        '''
+                        if skipdone:
+                                logger.info("Using skipdone")
+                                collab=set(["r_star", "star_flag"])
+                                existingcols=set(dcat.columns).intersection(collab)
+                                aux=collab-existingcols
+                                if len(aux)==0:
+                                        logger.info("All existing input cols were included")
+                                        continue
+                                else:
+                                        logger.info("Measurement file exist but it is missing %s,  %i == %i"%(" ".join(aux), len(collab), len(existingcols)))
+                        '''
+                        ws = _StarWorkerSettings(detectcatname, dcat, incat, img_id, xname, yname,threshold)
+                        wslist.append(ws)
+        _run(_starworker, wslist, ncpu)
+                        
+                        
+class _StarWorkerSettings():
+        def __init__(self, detectcatname, dcat, incat, img_id,xname, yname, threshold):
+                self.detectcatname=detectcatname
+                self.dcat= dcat
+                self.incat=incat
+                self.img_id=img_id
+                self.xname=xname
+                self.yname=yname
+                self.threshold=threshold
+             
 
-                        cataux=incat[incat['img_id']==img_id]
-                        itree=scipy.spatial.KDTree(cataux[['x','y']])
-                        distin,indin=itree.query(dcat[[xname,yname]],k=1)
-                        dcat["r_match"]=distin
-                        for col in cols:
-                                dcat["%s%s"%(col,matchlabel)]= cataux[col].to_numpy()[indin]
+def _starworker(ws):
+        from ..variables import GALCOLS
+        """
+        Worker function that the different processes will execute, processing the
+        _WorkerSettings objects.
+        """
+        starttime = datetime.datetime.now()
+        np.random.seed() #this is important
+        p = multiprocessing.current_process()
+        logger.info("%s is starting measure catalog %s with PID %s" % (p.name, str(ws.detectcatname), p.pid))
+        
+        cataux=ws.incat[ws.incat['img_id']==ws.img_id]
+        itree=scipy.spatial.KDTree(cataux[['x','y']])
+        distin,indin=itree.query(ws.dcat[[ws.xname,ws.yname]],k=1)
+        ws.dcat["r_star"]=distin
+        ws.dcat["star_flag"]=0
+        useflag=(ws.dcat["r_star"]<=ws.threshold)
+        if "r_match" in ws.dcat.columns:
+                useflag=(ws.dcat["r_match"]>ws.dcat["r_star"]) #that is more accurate than setting a threshold
+        ws.dcat.loc[useflag, "star_flag"]=1
+        for f in ["star_flux", "star_mag"]:
+                if f not in ws.incat.columns: continue
+                ws.dcat[f]=cataux[f].to_numpy()[indin]
+                ws.dcat.loc[~useflag,f]=-999
+                
+        for f in GALCOLS+["tru_g1","tru_g2"]:
+                if f not in list(ws.dcat.columns): continue
+                if f=="dominant_shape":continue
+                ws.dcat.loc[useflag, f]=[-999]*int(np.sum(useflag))
+        for f in ["x","y"]:
+                if f not in ws.dcat.columns: continue
+                ws.dcat.loc[useflag, f]=cataux[f].to_numpy()[indin][useflag]
+
+        catbintable = fits.BinTableHDU(ws.dcat.to_records(index=False))
+        with fits.open(ws.detectcatname) as hdul:
+                hdul.pop(1)
+                hdul.insert(1, catbintable)
+                hdul.writeto(ws.detectcatname, overwrite=True)
                                 
-                        catbintable = fits.BinTableHDU(dcat.to_records(index=False))
-                        with fits.open(detectcatname) as hdul:
-                                hdul.pop(1)
-                                hdul.insert(1, catbintable)
-                                hdul.writeto(detectcatname, overwrite=True)
+        endtime = datetime.datetime.now()
+        logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
 
 
+                                
 def measfct(measdir, inputdir, cols=[], ext='_galimg_meascat.fits', xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="_match", rot_pair=False, ncpu=1, skipdone=False):
         
         """
@@ -94,9 +132,7 @@ def measfct(measdir, inputdir, cols=[], ext='_galimg_meascat.fits', xname ='X_IM
                 #basename=os.path.basename(ddir).replace("_img", "")
                 basename=os.path.basename(ddir).rsplit("_img", 1)[0]
                 inputcatname=os.path.join(inputdir, '%s%s'%(basename, '_cat.fits'))
-                incat=fitsio.read(inputcatname)
-                incat= incat.astype(incat.dtype.newbyteorder('='))
-                incat = pd.DataFrame(incat)
+                incat=open_fits(inputcatname)
                 nimgs=max(incat["img_id"])+1
 
 
@@ -110,20 +146,7 @@ def measfct(measdir, inputdir, cols=[], ext='_galimg_meascat.fits', xname ='X_IM
                 for img_id in range(nimgs):
                         detectcatname=os.path.join(ddir,'%s_img%i%s'%(basename, img_id ,'%s'%(ext)))
                         logger.info("Matching %s"%(detectcatname))
-                        try:
-                                with fits.open(detectcatname) as hdul:
-                                        hdul.verify('fix')
-                                        dcat=hdul[1].data
-                                        dcat= dcat.astype(dcat.dtype.newbyteorder('='))
-                                        dcat = pd.DataFrame(dcat)
-                        except Exception as e:
-                                logger.info("Failed reading sextractor catalog %s removing it"%(detectcatname))
-                                logger.info(str(e))
-                                if os.path.isfile(detectcatname):
-                                        os.remove(detectcatname)
-                                continue
-
-
+                        dcat=open_fits(detectcatname)
                         if skipdone:
                                 logger.info("Using skipdone")
                                 collab=set(["%s%s"%(c,matchlabel) for c in cols])
@@ -137,7 +160,7 @@ def measfct(measdir, inputdir, cols=[], ext='_galimg_meascat.fits', xname ='X_IM
                         
                         ws = _WorkerSettings(detectcatname, dcat, incat, img_id, cols, xname, yname,  matchlabel)
                         wslist.append(ws)
-        _run(wslist, ncpu)
+        _run(_worker, wslist, ncpu)
 
 
 class _WorkerSettings():
@@ -160,7 +183,7 @@ def _worker(ws):
         starttime = datetime.datetime.now()
         np.random.seed() #this is important
         p = multiprocessing.current_process()
-        logger.info("%s is starting measure catalog %s with PID %s" % (p.name, str(ws), p.pid))
+        logger.info("%s is starting measure catalog %s with PID %s" % (p.name, str(ws.detectcatname), p.pid))
         
         cataux=ws.incat[ws.incat['img_id']==ws.img_id]
         itree=scipy.spatial.KDTree(cataux[['x','y']])
@@ -180,35 +203,5 @@ def _worker(ws):
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))
 
 
-def _run(wslist, ncpu):
-        """
-        Wrapper around multiprocessing.Pool with some verbosity.
-        """
-        
-        if len(wslist) == 0: # This test is useful, as pool.map otherwise starts and is a pain to kill.
-                logger.info("No images to measure.")
-                return
 
-        if ncpu == 0:
-                try:
-                        ncpu = multiprocessing.cpu_count()
-                except:
-                        logger.warning("multiprocessing.cpu_count() is not implemented!")
-                        ncpu = 1
-        
-        starttime = datetime.datetime.now()
-        
-        logger.info("Starting the drawing of %i images using %i CPUs" % (len(wslist), ncpu))
-        
-        if ncpu == 1: # The single process way (MUCH MUCH EASIER TO DEBUG...)
-                list(map(_worker, wslist))
-        
-        else:
-                pool = multiprocessing.Pool(processes=ncpu)
-                pool.map(_worker, wslist)
-                pool.close()
-                pool.join()
-        
-        endtime = datetime.datetime.now()
-        logger.info("Done, the total running time was %s" % (str(endtime - starttime)))
 

@@ -59,23 +59,3 @@ def skystats(stamp, edgewidth=1):
                 "mean":np.mean(edgepixels), "med":np.median(edgepixels),
                 "stampsum":np.sum(a)
         }
-
-
-def add_mfshear(catalog):
-        """
-        Adding mf_shear to gruopmeascat based on FlexiModelFitting of sextractor
-        catalog: fitsfile containing catalog
-        """
-        bad_flags=[-999,-888]
-
-        output = fitsio.read(catalog)
-        output = output.astype(output.dtype.newbyteorder('='))
-        output = pd.DataFrame(output)
-
-        mf_g = (1 - output['mf_ratio']) / (1 + output['mf_ratio'])
-        mf_g1 = mf_g * np.cos(2 * output['mf_angle'])
-        mf_g2 = mf_g * np.sin(2 * output['mf_angle'])
-        output['mf_g1'] = np.where(output['mf_ratio'].isin(bad_flags)|output['mf_angle'].isin(bad_flags),-999,mf_g1)
-        output['mf_g2'] = np.where(output['mf_ratio'].isin(bad_flags)|output['mf_angle'].isin(bad_flags),-999,mf_g2)
-        fitsio.write(catalog, output.to_records(index=False), clobber=True)
-
