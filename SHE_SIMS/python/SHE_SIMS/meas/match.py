@@ -90,7 +90,7 @@ def _starworker(ws):
         if "r_match" in ws.dcat.columns:
                 useflag=(ws.dcat["r_match"]>ws.dcat["r_star"]) #that is more accurate than setting a threshold
         ws.dcat.loc[useflag, "star_flag"]=1
-        for f in ["star_flux", "star_mag"]:
+        for f in ["tru_flux", "tru_mag"]:
                 if f not in ws.incat.columns: continue
                 ws.dcat[f]=cataux[f].to_numpy()[indin]
                 ws.dcat.loc[~useflag,f]=-999

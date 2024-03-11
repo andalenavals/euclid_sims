@@ -162,12 +162,11 @@ def parse_args():
 
 def group_measurements(filename, simdir, measdir, match_pairs, rot_pair, cols2d, cols1d, typegroup, nsubcases, constants=None, sexellip=True, picklecat=True, stars=False, cattype="tru"):
     #gal_density is include here while grouping
-
     if nsubcases>1:
         filename = filename.replace('.fits', '_subcase_ics2.fits')
         SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, rot_pair=rot_pair, stars=stars, nsubcases=nsubcases, subcasecol='ICS2', cattype=cattype)
     else:
-        if match_pairs:
+        if match_pairs&(cattype=="sex"):
             filename = filename.replace(".fits", "_matchpairs.fits")
             SHE_SIMS.group.cats_constimg_rotpair(simdir, measdir, cols2d=cols2d,cols1d=cols1d, stars=stars, filename=filename, cattype=cattype)
         else:
@@ -182,6 +181,7 @@ def group_measurements(filename, simdir, measdir, match_pairs, rot_pair, cols2d,
    
     if sexellip:
         SHE_SIMS.meas.sex.add_ellipsepars(filename)
+    
     
     if picklecat: SHE_SIMS.utils.makepicklecat(filename, typecat=typegroup, picklefilename=filename.replace(".fits",".pkl"),matchpairs=match_pairs)
     
@@ -329,7 +329,7 @@ def main():
         if args.cattype=="tru": measkwargs.update({"stars":args.stars})
         print(measkwargs)
 
-        SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
+        #SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
         if args.runneis:
             neicols=["adamom_sigma", "adamom_flux"]
             SHE_SIMS.meas.neighbors.measfct(adamomdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )

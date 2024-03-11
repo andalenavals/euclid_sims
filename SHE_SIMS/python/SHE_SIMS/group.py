@@ -103,6 +103,8 @@ def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tr
                 imgsmeascats[col] = trucat_const[col][0]          
 
         cols2d=[col for col in cols2d if col in meascat_dfs[0].columns]
+        if stars&(cattype=="tru"):
+            cols2d=list(set(cols2d +[col for col in cols2d if col in meascat_dfs[1].columns]))
     
         #Keep only specific columns and ids for future getting 3d and 2d data
         if label == "adamom_":
@@ -116,7 +118,7 @@ def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tr
 
     alldata_df=pd.concat(alldata, ignore_index=True)
     alldata_df=alldata_df.sort_values(by=['cat_id',  'img_id'], ignore_index=True)
-    print(np.sum(alldata_df.loc[ alldata_df["star_flag"]==0, "tru_g1"]),np.sum(alldata_df.loc[alldata_df["star_flag"]==0,"tru_g2"]))
+    #print(np.sum(alldata_df.loc[ alldata_df["star_flag"]==0, "tru_g1"]),np.sum(alldata_df.loc[alldata_df["star_flag"]==0,"tru_g2"]))
     fitsio.write(filename,  alldata_df.to_records(index=False), clobber=True)
     logger.info("Grouping finished")
 
@@ -224,7 +226,7 @@ def cats_constimg_rotpair(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_
             
     alldata_df=pd.concat(alldata, ignore_index=True)
     alldata_df=alldata_df.sort_values(by=['cat_id',  'img_id'], ignore_index=True)
-    print(np.sum(alldata_df.loc[ alldata_df["star_flag"]==0, "tru_g1"]),np.sum(alldata_df.loc[alldata_df["star_flag"]==0,"tru_g2"]))
+    #print(np.sum(alldata_df.loc[ alldata_df["star_flag"]==0, "tru_g1"]),np.sum(alldata_df.loc[alldata_df["star_flag"]==0,"tru_g2"]))
     fitsio.write(filename,  alldata_df.to_records(index=False), clobber=True)
   
 

@@ -142,8 +142,8 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                 if (nstar>0): star= params_eu_gen.draw_sample_star(nreas_star, sourcecat=sourcecat, constants=constants )
         
                 if nstar==ngal:
-                        star["star_flux"]=gal["tru_flux"]
-                        star["star_mag"]=gal["tru_mag"]
+                        star["tru_flux"]=gal["tru_flux"]
+                        star["tru_mag"]=gal["tru_mag"]
              
 
                 #print(star)
@@ -484,7 +484,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 for row in starcatalog:
                         #psf = galsim.InterpolatedImage( psfimg, flux=row["star_flux"], scale=psfpixelscale, gsparams=gsparams )
                         #psf.image.setOrigin(0,0)
-                        psf=psf.withFlux(row["star_flux"])
+                        psf=psf.withFlux(row["tru_flux"])
                         
                         xjitter = vispixelscale*(ud() - 0.5) 
                         yjitter = vispixelscale*(ud() - 0.5)

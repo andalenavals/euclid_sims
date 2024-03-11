@@ -419,7 +419,7 @@ def draw_sample_star(nsamples, sourcecat=None, constants=None):
         row = np.random.choice(cat, size=nsamples)
         tru_mag = row["tru_mag"]
         tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
-        out={"star_flux":tru_flux, "star_mag":tru_mag} 
+        out={"tru_flux":tru_flux, "tru_mag":tru_mag} 
         return out
 
 def draw_s(max_shear):

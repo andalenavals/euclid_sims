@@ -8,7 +8,7 @@ import pickle
 from astropy.io import fits
 import multiprocessing
 import datetime
-
+import fitsio
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +21,21 @@ def open_fits(filename, hdu=1):
         with fits.open(filename) as hdul:
             hdul.verify('fix')
             cat=hdul[hdu].data
-            cat = cat.astype(cat.dtype.newbyteorder('='))
-            return pd.DataFrame(cat)
+            cat = pd.DataFrame(cat.astype(cat.dtype.newbyteorder('=')))
+            hdul.close()
     except Exception as e:
-        logger.info("Unable to read existing measurement catalog %s, redoing it"%(filename))
         logger.info(str(e))
-        if os.path.exists(filename):
-            logger.info("removing %s"%(filename))
-            #os.remove(meascatpath)
+        logger.info("Unable to read existing measurement catalog %s, trying with fitsio"%(filename))
+        try:
+            cat=fitsio.read(filename, ext=hdu)
+            cat = pd.DataFrame(cat.astype(cat.dtype.newbyteorder('=')))
+        except Exception as f:
+            logger.info(str(f))
+            logger.info("Unable to read existing measurement catalog"%(filename))
             raise
+    logger.debug("Done reading")
+    return cat
+           
 
 def _run(workerfunction, wslist, ncpu):
         """
@@ -91,7 +97,7 @@ def get3Ddata_constimg(cat, features_cols, targets_cols=None):
  
 # The functions below are just for memory optimization you do not want to keep all the         
 def makepicklecat(filename, typecat="tp", picklefilename=None, matchpairs=True,):
-    from .variables import GALCOLS,SEXFEATS,PSFCOLS,MEASCOLS,MATCHCOLS,NEISCOLS,COLS1D,COLS2D,neicols_tru,neicols_sex,neicols_ada
+    from .variables import GALCOLS,STARCOLS,SEXFEATS,PSFCOLS,MEASCOLS,MATCHCOLS,NEISCOLS,COLS1D,COLS2D,neicols_tru,neicols_sex,neicols_ada
     #get3Ddata_constimg was taking to much time it is more efficient to save the astropy table pickle
     '''
     typecat: type of catalog. It can be 'tp' or 'tw'
@@ -103,10 +109,10 @@ def makepicklecat(filename, typecat="tp", picklefilename=None, matchpairs=True,)
   
     if (typecat=="tp"):
         cols1d = COLS1D +[ "cat_id"]+PSFCOLS + ["ws_true", "wi_true"] + GALCOLS
-        cols2d = COLS2D +["flag","img_id"]+["subcase_id", "ICS", "ICS2"] + SEXFEATS + PREDS + NEIS+ MEASCOLS
+        cols2d = COLS2D +["flag","img_id"]+["subcase_id", "ICS", "ICS2"] + SEXFEATS + PREDS + NEISCOLS+ MEASCOLS
     if (typecat=="tw"):
         cols1d=COLS1D + ["cat_id"] +PSFCOLS
-        cols2d=COLS2D+["real_obj_id", "flag", "obj_id", "img_id"]+GALCOLS+["subcase_id", "ICS", "ICS2"]+MATCHCOLS + SEXFEATS + PREDS + NEISCOLS + MEASCOLS +neicols_sex+neicols_ada+neicols_tru
+        cols2d=COLS2D+["real_obj_id", "flag", "obj_id", "img_id"]+GALCOLS+STARCOLS+["subcase_id", "ICS", "ICS2"]+MATCHCOLS + SEXFEATS + PREDS + NEISCOLS + MEASCOLS +neicols_sex+neicols_ada+neicols_tru
         # tru_gal_density is 2d only because the selection is done by realization so we need 2d for plots (or training)
         
     picklecat(filename, cols1d=cols1d, cols2d=cols2d,picklefilename=picklefilename, matchpairs=matchpairs, typecat=typecat)
@@ -116,15 +122,10 @@ def picklecat(filename, cols1d=None, cols2d=None,picklefilename=None, matchpairs
     '''
     typecat: type of catalog. It can be 'tp' or 'tw'
     '''
-    with fits.open(filename) as hdul:
-        hdul.verify('fix')
-        cat=hdul[1].data
-    #cat=fitsio.read(filename)
-    cat = cat.astype(cat.dtype.newbyteorder('='))
-    cat_df=pd.DataFrame(cat)
+    cat_df=open_fits(filename)
     # only using existing cols in the fict catalog
-    cols1d=[ col for col in cols1d if col in cat_df]
-    cols2d=[ col for col in cols2d if col in cat_df]
+    cols1d=[ col for col in cols1d if col in cat_df.columns]
+    cols2d=[ col for col in cols2d if col in cat_df.columns]
     
     m_features = get3Ddata_constimg(cat_df,cols2d )
     t_features = get3Ddata_constimg(cat_df,cols1d)
@@ -167,7 +168,7 @@ def picklecat(filename, cols1d=None, cols2d=None,picklefilename=None, matchpairs
             pickle.dump(vocat, handle, -1)
 
 def get_cols1d_cols2d_extracols(typegroup, cattype, meastype='adamom'):
-    from .variables import GALCOLS,SEXFEATS,PSFCOLS,MEASCOLS,MATCHCOLS,NEISCOLS,COLS1D,COLS2D,neicols_tru,neicols_sex,neicols_ada    
+    from .variables import GALCOLS,STARCOLS,SEXFEATS,PSFCOLS,MEASCOLS,MATCHCOLS,NEISCOLS,COLS1D,COLS2D,neicols_tru,neicols_sex,neicols_ada  
     if (typegroup =='tp'):
         cols1d = COLS1D+GALCOLS + PSFCOLS 
         if cattype=='tru':
@@ -176,7 +177,7 @@ def get_cols1d_cols2d_extracols(typegroup, cattype, meastype='adamom'):
             extracols= SEXFEATS + neicols_sex+COLS2D
     if (typegroup =='tw'):
         cols1d=COLS1D + PSFCOLS
-        tru_cols2d=[ "obj_id", "ics"]+COLS2D+ GALCOLS
+        tru_cols2d=[ "obj_id", "ics"]+COLS2D+ GALCOLS+STARCOLS
         if cattype=='tru':
             extracols=tru_cols2d+ neicols_tru
         if cattype=='sex':
