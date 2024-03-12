@@ -15,7 +15,7 @@ CONSTANTS=$SCRIPTDIR/configfiles/simconstants.yaml
 
 cd $SCRIPTDIR
 
-python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR  --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --substractsky --dist_type=flagship --cattype=sex --ncpu=200 --ncat=2000 --typegroup=tw --skipdone --runadamom --use_weight --nsubcases=2 --add_ics --runsex --run_check --runsims --usepsfimg --usevarsky --usevarpsf --rot_pair #--run_check  #--runsex --run_check --substractsky 
+python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR  --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --substractsky --dist_type=flagship --cattype=sex --ncpu=200 --ncat=2000 --typegroup=tw --skipdone --runadamom --use_weight --nsubcases=2 --add_ics --rot_pair --matchinput #--run_check  #--runsex --run_check --substractsky --runsex --run_check --runsims --usepsfimg --usevarsky --usevarpsf 
 
 
 

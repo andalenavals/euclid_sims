@@ -90,16 +90,13 @@ def _starworker(ws):
         if "r_match" in ws.dcat.columns:
                 useflag=(ws.dcat["r_match"]>ws.dcat["r_star"]) #that is more accurate than setting a threshold
         ws.dcat.loc[useflag, "star_flag"]=1
-        for f in ["tru_flux", "tru_mag"]:
-                if f not in ws.incat.columns: continue
-                ws.dcat[f]=cataux[f].to_numpy()[indin]
-                ws.dcat.loc[~useflag,f]=-999
-                
+   
         for f in GALCOLS+["tru_g1","tru_g2"]:
                 if f not in list(ws.dcat.columns): continue
                 if f=="dominant_shape":continue
                 ws.dcat.loc[useflag, f]=[-999]*int(np.sum(useflag))
-        for f in ["x","y"]:
+        
+        for f in ["x","y","tru_flux", "tru_mag"]:
                 if f not in ws.dcat.columns: continue
                 ws.dcat.loc[useflag, f]=cataux[f].to_numpy()[indin][useflag]
 

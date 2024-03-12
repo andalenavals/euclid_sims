@@ -16,7 +16,7 @@ SEX_ARGS=$SCRIPTDIR/configfiles/sexconfigfiles/oldsexconf.yaml
 CONSTANTS=$SCRIPTDIR/configfiles/simconstants.yaml
 cd $SCRIPTDIR
 
-python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --transformtogriddir=$BLENDEDDIR --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --dist_type=flagship --cattype=sex --ncpu=100 --ncat=2000 --typegroup=tw --skipdone --substractsky --transformtogrid --runadamom --rot_pair #--runsims --usepsfimg --usevarpsf --usevarsky --runsex --run_check #--use_weight 
+python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --transformtogriddir=$BLENDEDDIR --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --dist_type=flagship --cattype=sex --ncpu=100 --ncat=2000 --typegroup=tw --skipdone --substractsky --transformtogrid --runadamom --rot_pair --matchinput #--runsims --usepsfimg --usevarpsf --usevarsky --runsex --run_check #--use_weight 
 
 
 

@@ -138,12 +138,14 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                 ada_sigma = res.moments_sigma
                 ada_rho4 = res.moments_rho4
                 
+                centroid_shift=np.hypot(ada_x-x, ada_y-y)
+                
                 if ada_flux<0: continue
                 
 
-                adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4]                        
+                adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]                        
 
-                fields_names=[ "adamom_%s"%(n) for n in  ["flux", "x", "y", "g1", "g2", "sigma", "rho4"] ]
+                fields_names=[ "adamom_%s"%(n) for n in  ["flux", "x", "y", "g1", "g2", "sigma", "rho4"] ]+["centroid_shift"]
                 if skystats:
                         sky_list=[sky["std"], sky["mad"], sky["mean"], sky["med"],sky["stampsum"]]
                         adamom_list+=sky_list
@@ -225,7 +227,7 @@ def measure(imgfile, catname, img_id,  xname="x", yname="y", variant="default", 
                                 logger.info(str(e))
 
         if len(catalog)==0:
-                logger.info("Catalog %s have not galaxies. To noisy?"%(imgfile))
+                logger.info("Catalog %s have not galaxies. To noisy?"%(catname))
                 return
         
         prefix="adamom_"
@@ -313,7 +315,7 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
                 return
 
         if len(catalog)==0:
-                logger.info("WARNING sextractor catalog for %s have not galaxies. To noisy?"%(imgfile))
+                logger.info("WARNING sextractor catalog for %s have not galaxies. To noisy?"%(catname))
                 return
 
         
@@ -466,19 +468,21 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
 
                 gal_id = gal["NUMBER"]-1
                 ada_flux = res.moments_amp
-                ada_x = res.moments_centroid.x + 1.0 # Not fully clear why this +1 is needed. Maybe it's the setOrigin(0, 0).
-                ada_y = res.moments_centroid.y + 1.0 # But I would expect that GalSim would internally keep track of these origin issues.
+                ada_x = res.moments_centroid.x + 1.0 # This is to meet Sextractor convention
+                ada_y = res.moments_centroid.y + 1.0 # 
                 ada_g1 = res.observed_shape.g1
                 ada_g2 = res.observed_shape.g2
                 ada_sigma = res.moments_sigma
                 ada_rho4 = res.moments_rho4
+
+                centroid_shift=np.hypot(ada_x-x, ada_y-y)
                 
                 #saving only features if there were not failed measures
                 if ada_flux<0: continue
                 
-                adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4]                        
+                adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]                        
 
-                fields_names=[ "adamom_%s"%(n) for n in  ["flux", "x", "y", "g1", "g2", "sigma", "rho4"] ]
+                fields_names=[ "adamom_%s"%(n) for n in  ["flux", "x", "y", "g1", "g2", "sigma", "rho4"] ]+["centroid_shift"]
                 if skystats:
                         sky_list=[sky["std"], sky["mad"], sky["mean"], sky["med"],sky["stampsum"]]
                         adamom_list+=sky_list

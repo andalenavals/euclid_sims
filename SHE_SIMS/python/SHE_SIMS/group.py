@@ -23,7 +23,11 @@ def append_measurements(meascat_dfs, measimg, nimgs,basename, cat_id,ext, label,
         elif label=="mf_":
             meascatpath = os.path.join(measimg,"%s_img%i_galimg%s_cat.fits"%(basename,img_id,ext))
 
-        meascat_df=open_fits(meascatpath, hdu=hdu)
+        try:
+            meascat_df=open_fits(meascatpath, hdu=hdu)
+        except:
+            continue #raise
+            
         if "obj_id" in meascat_df.columns:
             c=cantor_pair(cat_id,img_id)
             real_obj_id= np.vectorize(cantor_pair)(c, meascat_df["obj_id"])
@@ -237,9 +241,7 @@ def trucats(simdir, cols1d=['tru_s1','tru_s2'], cols2d=['tru_g1','tru_g2'], file
     alldata=[]
     for cat_id, catname in enumerate(input_catalogs):
         logger.info("Doing cat %s"%(catname))
-        cat = fitsio.read(catname)
-        cat= cat.astype(cat.dtype.newbyteorder('='))
-        cat = pd.DataFrame(cat)
+        cat=open_fits(catname)
         cat["cat_id"] = cat_id
         
         trucat_const = fitsio.read(catname, ext=2)

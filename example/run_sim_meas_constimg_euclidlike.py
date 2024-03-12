@@ -329,7 +329,7 @@ def main():
         if args.cattype=="tru": measkwargs.update({"stars":args.stars})
         print(measkwargs)
 
-        #SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
+        SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
         if args.runneis:
             neicols=["adamom_sigma", "adamom_flux"]
             SHE_SIMS.meas.neighbors.measfct(adamomdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )
@@ -360,6 +360,17 @@ def main():
             cols1d.remove("tru_s2")
             SHE_SIMS.tools.utils.picklecat(filename, picklefilename=filename.replace(".fits",".pkl"), cols1d=cols1d, cols2d=cols2d)
 
+
+        if False:
+            filename=os.path.join(simdir, 'truegroupcats.fits')
+            if not os.path.isfile(filename):
+                print("File %s does not exist"%(filename))
+                SHE_SIMS.group.trucats(simdir, cols1d=cols1d, cols2d=cols2d, filename=filename)
+                SHE_SIMS.tools.utils.makepicklecat(filename, typecat=args.typegroup, picklefilename=filename.replace(".fits",".pkl"))
+
+
+
+            
     if args.runngmix:        
         logger.info("Running ngmix")
         # do not forget to use a conda env
