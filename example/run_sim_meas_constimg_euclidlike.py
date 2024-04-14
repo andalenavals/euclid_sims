@@ -115,6 +115,8 @@ def parse_args():
                         help='Remove the median on hte edge from the stamp ')
     parser.add_argument('--match_pairs', default=False,
                         action='store_const', const=True, help='When saving the final catalog, only include completed measure pairs (exclude pairs if only one was sucessfully measured) requires measures to be on top of true positions, each position have an ID')
+    parser.add_argument('--subsample_nbins', default=1, type=int, 
+                        help='Number of bins to subsample stamps before running hsm')
 
     # SETUPS ARGs
     
@@ -325,11 +327,11 @@ def main():
         if args.usevarshear:
             extracols+=["tru_s1", "tru_s2"]
             cols2d+=["tru_s1", "tru_s2"]
-        measkwargs={"variant":"wider","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5}
+        measkwargs={"variant":"wider","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5, "subsample_nbins":args.subsample_nbins }
         if args.cattype=="tru": measkwargs.update({"stars":args.stars})
         print(measkwargs)
 
-        SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
+        #SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
         if args.runneis:
             neicols=["adamom_sigma", "adamom_flux"]
             SHE_SIMS.meas.neighbors.measfct(adamomdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )
@@ -338,14 +340,14 @@ def main():
             if args.typegroup == "tp":
                 truecols=["x", "y", "tru_g1", "tru_g2"]
             if args.typegroup == "tw":
-                truecols=["tru_flux","tru_g", "tru_mag", "obj_id", "x", "y", "tru_g1", "tru_g2"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]+["tru_r_n1", "tru_mag_n1"]
+                truecols=["obj_id", "x", "y", "tru_g1", "tru_g2"]+SHE_SIMS.variables.GALCOLS+["tru_r_n1", "tru_mag_n1"]
             #SHE_SIMS.meas.match.measfct(adamomdir,simdir,ext='_meascat.fits', cols=truecols, xname ='adamom_x', yname='adamom_y' )
-            SHE_SIMS.meas.match.measfct(adamomdir,simdir,ext='_galimg_meascat.fits', cols=truecols, xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone )
-            if args.rot_pair: SHE_SIMS.meas.match.measfct(adamomdir,simdir,ext='_galimg_rot_meascat.fits', cols=truecols, xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone,rot_pair=True )
-        if (args.stars)&(args.cattype=="sex"):
-            matchkwargs={ "xname":'X_IMAGE', "yname":'Y_IMAGE', "ncpu":args.ncpu, "skipdone":args.skipdone, "threshold":10.0, }
-            SHE_SIMS.meas.match.stars(adamomdir,simdir,ext='_galimg_meascat.fits',  **matchkwargs )
-            if args.rot_pair: SHE_SIMS.meas.match.stars(adamomdir,simdir,ext='_galimg_rot_meascat.fits', **matchkwargs)
+            SHE_SIMS.meas.match.measfct(adamomdir,simdir,ext='_galimg_meascat.fits', cols=truecols, xname ='XWIN_IMAGE', yname='YWIN_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone )
+            if args.rot_pair: SHE_SIMS.meas.match.measfct(adamomdir,simdir,ext='_galimg_rot_meascat.fits', cols=truecols, xname ='XWIN_IMAGE', yname='YWIN_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone,rot_pair=True )
+            if (args.stars)&(args.cattype=="sex"):
+                matchkwargs={ "xname":'XWIN_IMAGE', "yname":'YWIN_IMAGE', "ncpu":args.ncpu, "skipdone":args.skipdone, "threshold":10.0, }
+                SHE_SIMS.meas.match.stars(adamomdir,simdir,ext='_galimg_meascat.fits',  **matchkwargs )
+                if args.rot_pair: SHE_SIMS.meas.match.stars(adamomdir,simdir,ext='_galimg_rot_meascat.fits', **matchkwargs)
  
         filename=os.path.join(adamomdir, args.groupcats)
         if args.cattype =='tru': sexellip=False
@@ -365,7 +367,7 @@ def main():
             filename=os.path.join(simdir, 'truegroupcats.fits')
             if not os.path.isfile(filename):
                 print("File %s does not exist"%(filename))
-                SHE_SIMS.group.trucats(simdir, cols1d=cols1d, cols2d=cols2d, filename=filename)
+                SHE_SIMS.group.trucats(simdir, cols1d=cols1d, cols2d=cols2d, stars=args.stars, filename=filename)
                 SHE_SIMS.tools.utils.makepicklecat(filename, typecat=args.typegroup, picklefilename=filename.replace(".fits",".pkl"))
 
 

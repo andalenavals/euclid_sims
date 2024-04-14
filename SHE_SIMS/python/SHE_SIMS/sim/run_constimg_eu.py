@@ -34,7 +34,7 @@ def drawsourceflagshipcat(sourcecat, catpath,  plotpath=None):
         cat=open_fits(sourcecat)
         cat["tru_mag"]=-2.5*np.log10(cat["euclid_vis"]) - 48.6
 
-        keepcols=["true_redshift_gal", "tru_mag", "bulge_r50", "bulge_nsersic", "bulge_ellipticity", "disk_r50", "disk_ellipticity", "inclination_angle", "gamma1", "gamma2", "dominant_shape", "disk_angle", "bulge_fraction", "disk_scalelength", "bulge_axis_ratio"]
+        keepcols=["true_redshift_gal", "tru_mag", "bulge_r50", "bulge_nsersic", "bulge_ellipticity", "disk_r50", "disk_ellipticity", "inclination_angle", "gamma1", "gamma2", "dominant_shape", "disk_angle", "bulge_fraction", "disk_scalelength", "bulge_axis_ratio", "euclid_vis"]
 
         cat=cat[keepcols].to_records(index=False)
 
@@ -136,7 +136,7 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                         #assert False
                 else:
                         x_list, y_list=params_eu_gen.draw_position_sample(nreas, imagesize, ngals=ngal, mode=mode)
-                        x_list_star, y_list_star=params_eu_gen.draw_position_sample(nreas_star, imagesize, ngals=nstar, mode=mode)
+                        if (nstar>0): x_list_star, y_list_star=params_eu_gen.draw_position_sample(nreas_star, imagesize, ngals=nstar, mode=mode)
 
                 gal= params_eu_gen.draw_sample(nreas,tru_type=tru_type,  dist_type=dist_type, sourcecat=sourcecat, constants=constants)
                 if (nstar>0): star= params_eu_gen.draw_sample_star(nreas_star, sourcecat=sourcecat, constants=constants )
@@ -248,6 +248,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 aux1,aux2=np.vectorize(calc.rotg)(catalog["tru_g1"],catalog["tru_g2"],sncrot)
                 catalog["tru_g1"]=aux1
                 catalog["tru_g2"]=aux2
+                catalog["tru_theta"]+=sncrot
                         
         
                 
@@ -369,38 +370,36 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         tru_theta=float(row["tru_theta"])
                         bulge = galsim.Sersic(n=tru_bulge_sersicn, half_light_radius=tru_bulge_rad, flux=tru_bulge_flux, gsparams = gsparams)
 
-                        '''
-                        bulge_ell = galsim.Shear(g=tru_bulge_g, beta=tru_theta * galsim.degrees)
-                        bulge = bulge.shear(bulge_ell)
-                        gal=bulge
+                        if False:
+                                bulge_ell = galsim.Shear(g=tru_bulge_g, beta=tru_theta * galsim.degrees)
+                                bulge = bulge.shear(bulge_ell)
+                                gal=bulge
                         
-                        if dominant_shape==1:
-                                # Get a disk
-                                
-                                disk = galsim.InclinedExponential(inclination=tru_disk_inclination* galsim.degrees , 
-                                                                  half_light_radius=tru_disk_rad,
-                                                                  flux=tru_disk_flux, 
-                                                                  scale_height=tru_disk_scaleheight,
-                                                                  gsparams = gsparams)
-                                disk = disk.rotate(tru_theta* galsim.degrees)                
-                                gal += disk
-                        '''
-
-                        bulge_ell = galsim.Shear(q=bulge_axis_ratio, beta=0 * galsim.degrees)
-                        bulge = bulge.shear(bulge_ell)
-                        gal=bulge
-                        C_DISK=0.1
+                                if dominant_shape==1:
+                                        disk = galsim.InclinedExponential(inclination=tru_disk_inclination* galsim.degrees , 
+                                                                          half_light_radius=tru_disk_rad,
+                                                                          flux=tru_disk_flux, 
+                                                                          scale_height=tru_disk_scaleheight,
+                                                                          gsparams = gsparams)
+                                        disk = disk.rotate(tru_theta* galsim.degrees)                
+                                        gal += disk
+                        else:
+                                bulge_ell = galsim.Shear(q=bulge_axis_ratio, beta=0 * galsim.degrees)
+                                bulge = bulge.shear(bulge_ell)
+                                gal=bulge
+                                C_DISK=0.1
                         
-                        if dominant_shape==1:
-                                incrad = np.radians(tru_disk_inclination)
-                                ba = np.sqrt(np.cos(incrad)**2 + (C_DISK * np.sin(incrad))**2)
-                                disk = galsim.InclinedExponential(inclination=tru_disk_inclination* galsim.degrees , 
-                                                                  half_light_radius=tru_disk_rad/np.sqrt(ba),
-                                                                  scale_h_over_r = C_DISK,
-                                                                  flux=tru_disk_flux, 
-                                                                  gsparams = gsparams)
-                                gal += disk
-                        gal = gal.rotate((90. + tru_theta) * galsim.degrees)
+                                if dominant_shape==1:
+                                        incrad = np.radians(tru_disk_inclination)
+                                        ba = np.sqrt(np.cos(incrad)**2 + (C_DISK * np.sin(incrad))**2)
+                                        disk = galsim.InclinedExponential(inclination=tru_disk_inclination* galsim.degrees , 
+                                                                          half_light_radius=tru_disk_rad/np.sqrt(ba),
+                                                                          scale_h_over_r = C_DISK,
+                                                                          flux=tru_disk_flux, 
+                                                                          gsparams = gsparams)
+                                        gal += disk
+                                        
+                                gal = gal.rotate((90. + tru_theta) * galsim.degrees)
                         
                                 
                 else:
@@ -529,12 +528,6 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         
                 
         # And add noise to the convolved galaxy:
-        
-        #gal_image.addNoise(galsim.CCDNoise(rng,
-        #                                   sky_level=float(const_cat["tru_sky_level"][0]),
-        #                                   gain=float(const_cat["tru_gain"][0]),
-        #                                   read_noise=float(const_cat["tru_read_noise"][0])))
-
         gal_image+=float(const_cat["sky_level"][0])
         gal_image.addNoise(galsim.CCDNoise(rng,
                                            sky_level=0.0,
@@ -580,7 +573,7 @@ def makeworkerlist(workdir, catalogs, basename_list, drawimgkwargs, skipdone, ex
                                         else:
                                                 if not os.path.getsize(imgname):
                                                         logger.info("Redoing %s, it is empty"%(imgname))
-                                                        os.remove(imgname)
+                                                        #os.remove(imgname)
                                                 else:
                                                         continue
                                 else:

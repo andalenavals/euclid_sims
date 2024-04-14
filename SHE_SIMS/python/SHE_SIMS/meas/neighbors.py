@@ -402,8 +402,8 @@ def _icsworker(ws):
         except Exception as e:
                 logger.info("Failed reading sextractor catalog %s removing it"%(detectcatname))
                 logger.info(str(e))
-                if os.path.isfile(detectcatname):
-                        os.remove(detectcatname)
+                #if os.path.isfile(detectcatname):
+                #        os.remove(detectcatname)
                 return
                                 
                         

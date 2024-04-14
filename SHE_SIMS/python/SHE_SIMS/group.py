@@ -90,7 +90,8 @@ def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tr
             imgsmeascats["cat_id"] = cat_id
         else:
             assert subcasecol is not None
-            splitl=np.array_split(imgsmeascats.sort_values(by=[subcasecol], ignore_index=True), nsubcases)
+            splitl=np.array_split(imgsmeascats.sort_values(by=[subcasecol], ignore_index=True).to_records(index=False), nsubcases)
+            splitl = [pd.DataFrame(split) for split in splitl]
             auxl=[]
             for i, df in enumerate(splitl):
                 df['subcase_id']=i
@@ -234,10 +235,11 @@ def cats_constimg_rotpair(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_
     fitsio.write(filename,  alldata_df.to_records(index=False), clobber=True)
   
 
-def trucats(simdir, cols1d=['tru_s1','tru_s2'], cols2d=['tru_g1','tru_g2'], filename=None):
+def trucats(simdir, cols1d=['tru_s1','tru_s2'], cols2d=['tru_g1','tru_g2'], stars=False,filename=None):
     ext='_cat.fits'
     input_catalogs=sorted(glob.glob(os.path.join(simdir, '*%s'%(ext)) ))
 
+    
     alldata=[]
     for cat_id, catname in enumerate(input_catalogs):
         logger.info("Doing cat %s"%(catname))
@@ -252,6 +254,26 @@ def trucats(simdir, cols1d=['tru_s1','tru_s2'], cols2d=['tru_g1','tru_g2'], file
         alldata.append(cat[cols2d+cols1d+['cat_id', 'img_id']])
     alldata_df=pd.concat(alldata, ignore_index=True)
     alldata_df=alldata_df.sort_values(by=['cat_id',  'img_id'], ignore_index=True)
+    
+
+
+    if stars:
+        alldata_stars=[]
+        for cat_id, catname in enumerate(input_catalogs):
+            logger.info("Doing cat %s"%(catname))
+            cat=open_fits(catname,hdu=3)
+            cat["cat_id"] = cat_id
+            
+            trucat_const = fitsio.read(catname, ext=2)
+            cols1d=[col for col in cols1d if col in trucat_const.dtype.names]
+            cols2d=[col for col in cols2d if col in cat.columns]
+            for col in cols1d :
+                cat[col] = trucat_const[col][0]
+            alldata_stars.append(cat[cols2d+cols1d+['cat_id', 'img_id']])
+        alldata_df_stars=pd.concat(alldata, ignore_index=True)
+        alldata_df_stars=alldata_df_stars.sort_values(by=['cat_id',  'img_id'], ignore_index=True)
+
+
     if filename is None: filename=os.path.join(simdir, 'truegroupcats.fits')
     fitsio.write(filename,  alldata_df.to_records(index=False), clobber=True)
-
+    fitsio.write(filename,  alldata_df_stars.to_records(index=False), clobber=False)

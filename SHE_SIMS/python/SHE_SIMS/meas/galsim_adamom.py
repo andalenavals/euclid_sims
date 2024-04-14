@@ -20,7 +20,7 @@ import galsim
 profiles=["Gaussian", "Sersic", "EBulgeDisk"]
 RLIST=[10,15,20,25,30]
 
-def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=True,use_weight=True, skystats=True, nmaskedpix=True, variant = "default", extra_cols=None, edgewidth=5,rot_pair=False, starflag=0):
+def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=True,use_weight=True, skystats=True, nmaskedpix=True, variant = "default", extra_cols=None, edgewidth=5, subsample_nbins=1, rot_pair=False, starflag=0):
         imagesize=img.array.shape[0]
         
         sigs_stamp=10
@@ -33,7 +33,7 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                         
                 #logger.info("Using stampsize %i"%(stampsize))
                         
-                (x, y) = (gal[xname], gal[yname]) # I set origin to (0,0)
+                (x, y) = (gal[xname], gal[yname]) 
                 pos = galsim.PositionD(x,y)
                 
                 lowx=int(np.floor(x-0.5*stampsize))
@@ -58,7 +58,13 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                 sky = utils.skystats(gps, edgewidth)
                 if substractsky:
                         gps-=sky["med"]
-                        sky = utils.skystats(gps, edgewidth)
+
+                ##subsample
+                if subsample_nbins>1:
+                        gps=gps.subsample(subsample_nbins,subsample_nbins)
+                        gps.setCenter(center)
+                
+                        
 
                 if use_weight: assert (weight is not None)
                 
@@ -68,7 +74,6 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                         indx_use = [ 0, img_seg_stamp[center]]
                         mask = np.isin(img_seg_stamp.array,  indx_use) #True means use, False reject
                         gps_w = galsim.Image(mask*1, xmin=lowx,ymin=lowy)
-                        if ~use_weight: gps_w=None
 
                         if nmaskedpix:
                                 ny=uppery - lowy + 1
@@ -96,11 +101,17 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
 
                                 galseg = np.isin(img_seg_stamp.array,  [img_seg_stamp[center]] )*1
                                 galseg_area=np.sum(galseg)
+                        if subsample_nbins>1:
+                                gps_w=gps_w.subsample(subsample_nbins,subsample_nbins)
+                                gps_w=galsim.Image(np.ceil(gps_w.array).astype(int))
+                                gps_w.setCenter(center)
                         
                 else:
                         gps_w = None
                         nmaskedpix=False
                         assert ~use_weight
+
+                if not use_weight: gps_w=None
                         
                 # And now we measure the moments... galsim may fail from time to time, hence the try:
                 if variant == "default":
@@ -114,15 +125,17 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                                 continue # skip to next stamp !
                 
                 elif variant == "wider":
-
                         try:
                                 try: # First we try defaults:
                                         res = galsim.hsm.FindAdaptiveMom(gps, weight=gps_w, guess_centroid=pos)
+                                        #res = galsim.hsm.FindAdaptiveMom(gps, weight=gps_w)
                                 except: # We change a bit the settings:
                                         logger.debug("HSM defaults failed, retrying with larger sigma...")
                                         hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
-                                        res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15.0, hsmparams=hsmparams, weight=gps_w,  guess_centroid=pos)                        
-
+                                        res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15.0, hsmparams=hsmparams, weight=gps_w,  guess_centroid=pos, round_moments=False)
+                                        #res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15.0, hsmparams=hsmparams)                   
+                                if res.moments_amp<0: continue
+                                if res.moments_rho4<=-1: continue
                         except: # If this also fails, we give up:
                                 logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)              
                                 continue
@@ -131,8 +144,8 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                         raise RuntimeError("Unknown variant setting '{variant}'!".format(variant=variant))
 
                 ada_flux = res.moments_amp
-                ada_x = res.moments_centroid.x + 1.0 # Not fully clear why this +1 is needed. Maybe it's the setOrigin(0, 0).
-                ada_y = res.moments_centroid.y + 1.0 # But I would expect that GalSim would internally keep track of these origin issues.
+                ada_x = res.moments_centroid.x
+                ada_y = res.moments_centroid.y 
                 ada_g1 = res.observed_shape.g1
                 ada_g2 = res.observed_shape.g2
                 ada_sigma = res.moments_sigma
@@ -141,6 +154,7 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                 centroid_shift=np.hypot(ada_x-x, ada_y-y)
                 
                 if ada_flux<0: continue
+                if ada_rho4<=-1: continue
                 
 
                 adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]                        
@@ -180,7 +194,7 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                 outdata[key] = (np.array(data).T)[i]
         return outdata
 
-def measure(imgfile, catname, img_id,  xname="x", yname="y", variant="default", weight=None,  filename=None,  skystats=True, nmaskedpix=True, extra_cols=None, use_weight=True, rot_pair=False, skipdone=False, substractsky=True, edgewidth=5, stars=False):
+def measure(imgfile, catname, img_id,  xname="x", yname="y", variant="default", weight=None,  filename=None,  skystats=True, nmaskedpix=True, extra_cols=None, use_weight=True, rot_pair=False, skipdone=False, substractsky=True, edgewidth=5, subsample_nbins=1, stars=False):
         """
         #catalog: catalog of objects in imgfile 
         #weight: weight image (segmentation map) to get neighbors features
@@ -267,7 +281,7 @@ def measure(imgfile, catname, img_id,  xname="x", yname="y", variant="default", 
         measkwargs={"xname":xname,
                     "yname":yname,"substractsky":substractsky,"use_weight":use_weight,
                     "skystats":skystats,"nmaskedpix":nmaskedpix, "variant":variant,
-                    "extra_cols":extra_cols, "edgewidth":edgewidth,
+                    "extra_cols":extra_cols, "edgewidth":edgewidth, "subsample_nbins":subsample_nbins,
                     "rot_pair":rot_pair}
         gal_outdata=get_measure_array(catalog, img, img_seg, starflag=0, **measkwargs)
         if stars:
@@ -290,7 +304,7 @@ def measure(imgfile, catname, img_id,  xname="x", yname="y", variant="default", 
         logger.info("This measurement took %.3f ms per galaxy" % (1e3*(endtime - starttime).total_seconds() / float(n)))
 
 
-def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant="default", weight=None,  filename=None, skystats=True, nmaskedpix=True, extra_cols=None, use_weight=True, rot_pair=False, skipdone=False, substractsky=True, edgewidth=5):
+def measure_withsex(imgfile, catname, xname="XWIN_IMAGE", yname="YWIN_IMAGE", variant="default", weight=None,  filename=None, skystats=True, nmaskedpix=True, extra_cols=None, use_weight=True, rot_pair=False, skipdone=False, substractsky=True, edgewidth=5, subsample_nbins=1):
         """
         #catalog: catalog of objects of the imgfie to measure
         #weight: weight image (segmentation map) to get neighbors features
@@ -311,7 +325,7 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
         except Exception as e:
                 logger.info("Skipping measurement. Unable to read catalog %s, removing it"%(catname))
                 logger.info(str(e))
-                if os.path.isfile(catname): os.remove(catname)
+                #if os.path.isfile(catname): os.remove(catname)
                 return
 
         if len(catalog)==0:
@@ -332,13 +346,13 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
         if type(imgfile) is str:
                 logger.debug("Loading FITS image %s..." % (imgfile))
                 try:
-                        img = galsim.fits.read(imgfile)
+                        img = galsim.fits.read(imgfile)  #The default bounding box will have (xmin,ymin) at (1,1)
                         logger.debug("Done with loading %s, shape is %s" % (imgfile, img.array.shape))
                 except:
                         logger.info("exception trying to read image %s"%(imgfile))
                         if os.path.exists(imgfile):
                                 logger.info("removing corrupted image")
-                                os.remove(imgfile)
+                                #os.remove(imgfile)
                                 return None
                 imagesize=img.array.shape[0]
 
@@ -351,8 +365,8 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
                         img_seg=galsim.Image(data_seg)
                 except:
                         if os.path.exists(segmap_img):
-                                logger.info("removing corrupted segmentation map")
-                                os.remove(segmap_img)
+                                #logger.info("removing corrupted segmentation map")
+                                #os.remove(segmap_img)
                                 return None
 
        
@@ -373,7 +387,7 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
                         
                 #logger.info("Using stampsize %i"%(stampsize))
                         
-                (x, y) = (gal[xname], gal[yname]) #sextractor coordinates beginng in (1.0,1.0)
+                (x, y) = (gal[xname], gal[yname]) #sextractor coordinates beginng in (1.0,1.0) (This is the center of lower left pixel
                 pos = galsim.PositionD(x,y)
                 
                 lowx=int(np.floor(x-0.5*stampsize)) 
@@ -398,7 +412,11 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
                 sky = utils.skystats(gps, edgewidth)
                 if substractsky:
                         gps-=sky["med"]
-                        sky = utils.skystats(gps, edgewidth)
+
+                ##subsample
+                if subsample_nbins>1:
+                        gps=gps.subsample(subsample_nbins,subsample_nbins)
+                        gps.setCenter(center)
 
                 if use_weight: assert (weight is not None)
                 if weight is not None:
@@ -406,7 +424,6 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
                         indx_use = [ 0, img_seg_stamp[center]]
                         mask = np.isin(img_seg_stamp.array,  indx_use)
                         gps_w = galsim.Image(mask*1, xmin=lowx,ymin=lowy)
-                        if ~use_weight: gps_w=None
 
                         if nmaskedpix:
                                 ny=uppery - lowy + 1
@@ -434,9 +451,15 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
 
                                 galseg = np.isin(img_seg_stamp.array,  [img_seg_stamp[center]] )*1
                                 galseg_area=np.sum(galseg)
+                        if subsample_nbins>1:
+                                gps_w=gps_w.subsample(subsample_nbins,subsample_nbins)
+                                gps_w=galsim.Image(np.ceil(gps_w.array).astype(int))
+                                gps_w.setCenter(center)
                 else:
                         gps_w = None
                         nmaskedpix=False
+                        
+                if not use_weight: gps_w=None
      
                 # And now we measure the moments... galsim may fail from time to time, hence the try:
                 if variant == "default":
@@ -468,8 +491,8 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
 
                 gal_id = gal["NUMBER"]-1
                 ada_flux = res.moments_amp
-                ada_x = res.moments_centroid.x + 1.0 # This is to meet Sextractor convention
-                ada_y = res.moments_centroid.y + 1.0 # 
+                ada_x = res.moments_centroid.x
+                ada_y = res.moments_centroid.y
                 ada_g1 = res.observed_shape.g1
                 ada_g2 = res.observed_shape.g2
                 ada_sigma = res.moments_sigma
@@ -479,6 +502,7 @@ def measure_withsex(imgfile, catname, xname="X_IMAGE", yname="Y_IMAGE", variant=
                 
                 #saving only features if there were not failed measures
                 if ada_flux<0: continue
+                if ada_rho4<=-1: continue
                 
                 adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]                        
 

@@ -3,7 +3,7 @@ import numpy as np
 GALCOLS=[ "tru_rad", "tru_sb", "tru_sersicn", "tru_flux","tru_g", "tru_mag"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]+["disk_angle","disk_scalelength","bulge_r50","disk_r50", "inclination_angle", "bulge_ellipticity", "bulge_nsersic", "tru_bulge_g", "bulge_axis_ratio"]
 STARCOLS=["star_flag","r_star", "star_flux", "star_mag"]
 
-SEXFEATS =["X_IMAGE", "Y_IMAGE", "MAG_AUTO", "SNR_WIN", "FLAGS", "FWHM_IMAGE", "FLUX_RADIUS","FLUX_WIN", "ELONGATION_WIN", "ELLIP_WIN", "ELLIP1_WIN", "ELLIP2_WIN", "ELLIP_AREA", "FLUXERR_WIN", "MAGERR_AUTO", "MAG_WIN",  "MAG_PSF", "PETRO_RADIUS", "KRON_RADIUS",  "SPREADERR_MODEL", "CLASS_STAR", ] +["ELONGATION","AWIN_IMAGE", "BWIN_IMAGE" , "THETAWIN_IMAGE", "ERRAWIN_IMAGE", "ERRBWIN_IMAGE", "ERRTHETAWIN_IMAGE" , "CXXWIN_IMAGE", "CYYWIN_IMAGE", "CXYWIN_IMAGE", "ERRCXXWIN_IMAGE", "ERRCYYWIN_IMAGE", "ERRCXYWIN_IMAGE" ]
+SEXFEATS =["X_IMAGE", "Y_IMAGE", "XWIN_IMAGE", "YWIN_IMAGE", "MAG_AUTO", "SNR_WIN", "FLAGS", "FWHM_IMAGE", "FLUX_RADIUS","FLUX_WIN", "FLUX_AUTO", "FLUXERR_AUTO", "FLUXERR_WIN", "MAGERR_AUTO", "ELONGATION_WIN", "ELLIP_WIN", "ELLIP1_WIN", "ELLIP2_WIN", "ELLIP_AREA", "MAG_WIN",  "MAG_PSF", "PETRO_RADIUS", "KRON_RADIUS",  "SPREADERR_MODEL", "CLASS_STAR", ] +["ELONGATION","AWIN_IMAGE", "BWIN_IMAGE" , "THETAWIN_IMAGE", "ERRAWIN_IMAGE", "ERRBWIN_IMAGE", "ERRTHETAWIN_IMAGE" , "CXXWIN_IMAGE", "CYYWIN_IMAGE", "CXYWIN_IMAGE", "ERRCXXWIN_IMAGE", "ERRCYYWIN_IMAGE", "ERRCXYWIN_IMAGE" ]
 
 PSFCOLS =  [ "%s%s"%("psf_adamom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4"]]+["quadrant", "ccd","z", "e1", "e2", "R2", "sed"]+[ "%s%s"%("psf_mom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4", "M4_1","M4_2"]]
 
@@ -16,5 +16,10 @@ neicols_tru=["tru_r_n1", "tru_r_n2"]+["tru_flux_n1","tru_rad_n1", "tru_mag_n1"]+
 neicols_sex=["SEX_R_n1", "SEX_R_n2", "SNR_WIN_n1", "SNR_WIN_n2", "MAG_AUTO_n1", "MAG_AUTO_n2"]
 neicols_ada=["adamom_r_n1", "adamom_flux_n1", "adamom_sigma_n1"]+["adamom_r_n2", "adamom_flux_n2", "adamom_sigma_n2"]
 
-COLS1D=["tru_s1", "tru_s2", "tru_gal_density", "tru_sky_level"]
+COLS1D=["tru_s1", "tru_s2", "tru_gal_density", "tru_sky_level", "sky_level"]
 COLS2D=['tru_g1', "tru_g2", "x", "y", "tru_theta"]+["tru_bulge_g1", "tru_bulge_g2"]
+
+
+#COLS2D_PICKLE=COLS2D+["real_obj_id", "flag", "obj_id", "img_id"]+GALCOLS+STARCOLS+["subcase_id", "ICS", "ICS2"]+MATCHCOLS + SEXFEATS + PREDS + NEISCOLS + MEASCOLS +neicols_sex+neicols_ada+neicols_tru
+COLS2D_PICKLE=COLS2D+["flag"]+GALCOLS+STARCOLS+["ICS", "ICS2"]+MATCHCOLS + SEXFEATS[:14] + NEISCOLS + MEASCOLS +neicols_sex+neicols_ada+neicols_tru
+COLS1D_PICKLE=COLS1D +PSFCOLS

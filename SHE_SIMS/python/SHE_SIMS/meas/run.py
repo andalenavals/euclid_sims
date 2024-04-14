@@ -87,7 +87,7 @@ def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galim
                                 
                                 if  os.path.isfile(sex_cat_name):
                                      if not os.path.getsize(sex_cat_name):
-                                             os.remove(sex_cat_name)
+                                             #os.remove(sex_cat_name)
                                              logger.warning("Corrupted sextractor catalog %s"%(sex_cat_name))
                                              break
                                 else:
@@ -303,7 +303,7 @@ def makeworkerlist(simdir, measdir, sexdir, cattype,skipdone, measkwargs, ext='_
                                 
                                 if  os.path.isfile(sex_cat_name):
                                      if not os.path.getsize(sex_cat_name):
-                                             os.remove(sex_cat_name)
+                                             #os.remove(sex_cat_name)
                                              logger.warning("Corrupted sextractor catalog %s"%(sex_cat_name))
                                              break
                                 else:
@@ -746,11 +746,13 @@ def sextractorpp(simdir, sex_bin=None, sex_config=None, sex_params=None, sex_fil
                                         except:
                                                 logger.info("Something went wrong with image %s"%(check_file))
                                                 logger.info("Trying measuring again")
+                                                '''
                                                 if check_file is not None:
                                                         if os.path.isfile(check_file):
                                                                 os.remove(check_file)
-                                                if os.path.isfile(cat_file): os.remove(cat_file)
-
+                                                if os.path.isfile(cat_file):
+                                                        os.remove(cat_file)
+                                                '''
                         
                         if use_psfimg:
                                 if psf_file is None:
@@ -865,10 +867,12 @@ def sextractor(simdir, sex_bin, sex_config, sex_params, sex_filter, sex_nnw, ski
                                         except:
                                                 logger.info("Something went wrong with image %s"%(check_file))
                                                 logger.info("Trying measuring again")
+                                                '''
                                                 if check_file is not None:
                                                         if os.path.isfile(check_file):
                                                                 os.remove(check_file)
                                                 if os.path.isfile(cat_file): os.remove(cat_file)
+                                                '''
                              
 
                                                 '''

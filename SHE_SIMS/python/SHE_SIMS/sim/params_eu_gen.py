@@ -202,7 +202,7 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
                         tru_bulge_rad = np.random.uniform(0.1, 1.0) # in arcsec
                         tru_mag = np.random.uniform(20.5, 25.0)
                         #tru_mag = np.random.uniform(20.0, 26.0)
-                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
+                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint)) #in ADU
                         tru_bulge_g = trunc_rayleigh(0.25, 0.7)
                         tru_theta = 2.0 * np.pi * np.random.uniform(0.0, 1.0)   
 
@@ -212,21 +212,6 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
                         with fits.open(sourcecat) as hdul:
                                 cat=hdul[1].data
                                 hdul.close()
-
-                        '''
-                        nbins=25
-                        rmin=0.1; rmax=1.0 # in arcsec
-                        magmin=20.5; magmax=25.0
-                        sernmin=0.3; sernmax=6.0
-                        dr=(rmax-rmin)/nbins
-                        dmag=(magmax-magmin)/nbins
-                        dserc=(sernmax-sernmin)/nbins
-
-                        leng=0
-                        while leng==0:
-                                auxcat=get_cat(copy.deepcopy(cat), rmin, rmax, magmin, magmax,sernmin,sernmax, dr,dmag,dserc)
-                                leng=len(auxcat)
-                        '''
 
                         leng=0
                         while leng==0:
