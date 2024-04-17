@@ -10,7 +10,7 @@ import datetime
 import fitsio
 import yaml
 import ray
-RAY=True
+RAY=False
 if RAY:
     import ray.util.multiprocessing as multiprocessing
 else:
@@ -118,9 +118,7 @@ def parallel_map(process_task, wslist, ncpu):
 
         # Free up CPU for next task
         cpu_tasks[cpu_tasks.index(finished_task)] = None
-
-    # Wait for all tasks to finish
-    ray.get(cpu_tasks)
+    logger.info("Parallel map of jobs finished!!")
         
 def shapeit(cat, cols):
     """
@@ -275,6 +273,7 @@ def read_integers_from_file(filename):
     return integers
         
 def group_measurements(filename, inputcat, workdir, picklecat=True):
+    logger.info("Grouping catalogs")
     cat=open_fits(inputcat,hdu=1)
 
     alldata=[]
@@ -292,5 +291,5 @@ def group_measurements(filename, inputcat, workdir, picklecat=True):
     alldata_df=alldata_df.sort_values(by=['cat_id'], ignore_index=True)
     fitsio.write(filename,  alldata_df.to_records(index=False), clobber=True)
     if picklecat: makepicklecat(filename, picklefilename=filename.replace(".fits",".pkl"))
-
+    logger.info("Grouping catalogs finished!!")
 

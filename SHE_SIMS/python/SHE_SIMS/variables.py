@@ -7,7 +7,7 @@ SEXFEATS =["X_IMAGE", "Y_IMAGE", "XWIN_IMAGE", "YWIN_IMAGE", "MAG_AUTO", "SNR_WI
 
 PSFCOLS =  [ "%s%s"%("psf_adamom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4"]]+["quadrant", "ccd","z", "e1", "e2", "R2", "sed"]+[ "%s%s"%("psf_mom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4", "M4_1","M4_2"]]
 
-MEASCOLS=["adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4", "x", "y"]]+["centroid_shift"]+['gal_density']+["skymad","snr"]+['psf_g1_ksb', 'psf_sigma_ksb', 'psf_g2_ksb']+["corr_s1","corr_s2"]+["ngmix_dx", "ngmix_dy","ngmix_e1", "ngmix_e2", "ngmix_T", "ngmix_flux" ]+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,""), "ngmix_%s_%s%s"%("fit",f,"corr")] for f in ["flags","T","T_err","s2n","g1","g2","g1_err","g2_err"]]).tolist()+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,"")] for f in ["flux","flux_err"]]).tolist()
+MEASCOLS=["adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4", "x", "y"]]+["centroid_shift"]+['gal_density']+["skymad","snr"]+['psf_g1_ksb', 'psf_sigma_ksb', 'psf_g2_ksb']+["corr_s1","corr_s2"]+["ngmix_dx", "ngmix_dy","ngmix_e1", "ngmix_e2", "ngmix_T", "ngmix_flux" ]+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,""), "ngmix_%s_%s%s"%("fit",f,"corr")] for f in ["flags","T","T_err","s2n","g1","g2","g1_err","g2_err"]]).tolist()+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,"")] for f in ["flux","flux_err"]]).tolist() +["tru_adamom_sigma"]
        
 MATCHCOLS=["tru_rad_match", "tru_mag_match", "tru_r_n1_match", "r_match"]
 

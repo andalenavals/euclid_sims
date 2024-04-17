@@ -273,11 +273,14 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             gal = gal.rotate((90. + tru_theta) * galsim.degrees)
             if rot: gal = gal.rotate(90. * galsim.degrees)
 
-            
+            '''
             try:
-                finestamp=gal.drawImage(scale=psfpixelscale)
+                galtest=gal.withFlux(1.0)
+                finestamp=galtest.drawImage(scale=psfpixelscale)
             except:
-                continue
+                counter+=1
+                raise RuntimeError("Could not draw the input galaxy")
+                break
                 
             try: # First we try defaults:
                 inputres = galsim.hsm.FindAdaptiveMom(finestamp, weight=None)
@@ -287,9 +290,18 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
                     hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
                     inputres = galsim.hsm.FindAdaptiveMom(finestamp, guess_sig=15.0, hsmparams=hsmparams, weight=None)
                 except:
-                    continue                
+                    counter+=1
+                    raise RuntimeError("Could not measure the input galaxy")
+                    break               
             tru_ada_sigma=inputres.moments_sigma
-
+            '''
+            
+            try:
+                tru_ada_sigma=gal.withFlux(1.0).calculateHLR()
+            except:
+                print(gal)
+                raise RuntimeError("Could not get the HLR from input galaxy")
+                
         
             gal = gal.lens(float(row["tru_s1"]), float(row["tru_s2"]), 1.0)
             xjitter = vispixelscale*(ud() - 0.5)
@@ -331,7 +343,10 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             ada_sigma = res.moments_sigma
             ada_rho4 = res.moments_rho4
             centroid_shift=np.hypot(ada_x-stamp.true_center.x, ada_y-stamp.true_center.y)
-            if centroid_shift>2: continue
+            if centroid_shift>3:
+                counter+=1
+                break
+                #continue
             skymad=sky["mad"]
             aper=3
             snr=(ada_flux*constants["realgain"][0])/(np.sqrt(ada_flux*constants["realgain"][0] + (np.pi*(ada_sigma*aper*1.1774)**2) * (skymad*constants["realgain"][0])**2))
@@ -376,8 +391,10 @@ def simmeas(inputcat, measdir=None, skipdone=True, ncpu=1, measkwargs=None, blac
         ws = _WorkerSettings(i, row, constants, copy.deepcopy(measkwargs))
         wslist.append(ws)
     np.random.shuffle(wslist)
-    #_run(_worker, wslist,ncpu)
-    parallel_map(_worker, wslist,ncpu)
+    if not RAY:
+        _run(_worker, wslist,ncpu)
+    else:
+        parallel_map(_worker, wslist,ncpu)
 
 class _WorkerSettings():
     def __init__(self, catid, row, constants, measkwargs):

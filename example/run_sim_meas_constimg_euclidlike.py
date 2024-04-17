@@ -240,7 +240,6 @@ def main():
     #loading constants in sims like gain, exptime, ron, zeropoint,
     constants=readyaml(args.constants)
 
-    
     assert os.path.isfile(args.adamompsfcatalog)
 
     if args.usevarsky:
@@ -331,7 +330,7 @@ def main():
         if args.cattype=="tru": measkwargs.update({"stars":args.stars})
         print(measkwargs)
 
-        #SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
+        SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
         if args.runneis:
             neicols=["adamom_sigma", "adamom_flux"]
             SHE_SIMS.meas.neighbors.measfct(adamomdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )
