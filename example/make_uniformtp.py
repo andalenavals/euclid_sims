@@ -18,7 +18,7 @@ import galsim
 import datetime
 import copy
 
-RAY=True
+RAY=False
 if RAY:
     import ray
     import ray.util.multiprocessing as multiprocessing
@@ -178,7 +178,7 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
     logger.info("Doing %s"%(filename))
     vispixelscale=0.1 #arcsec
     psfpixelscale = 0.02 #arcsec
-    gsparams = galsim.GSParams(maximum_fft_size=50000)
+    gsparams = galsim.GSParams(maximum_fft_size=100000)
     rng = galsim.BaseDeviate()
     ud = galsim.UniformDeviate()
 
@@ -269,10 +269,11 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             else:
                 raise RuntimeError("Unknown galaxy profile!")
 
-        
-            gal = gal.rotate((90. + tru_theta) * galsim.degrees)
-            if rot: gal = gal.rotate(90. * galsim.degrees)
-
+            theta=90. + tru_theta
+            gal = gal.rotate(theta * galsim.degrees)
+            if rot:
+                gal = gal.rotate(90. * galsim.degrees)
+                theta+=90.
             '''
             try:
                 galtest=gal.withFlux(1.0)
@@ -296,12 +297,17 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             tru_ada_sigma=inputres.moments_sigma
             '''
             
+            '''
             try:
                 tru_ada_sigma=gal.withFlux(1.0).calculateHLR()
             except:
                 print(gal)
+                couter+=patience
+                break
                 raise RuntimeError("Could not get the HLR from input galaxy")
-                
+            '''
+            
+            tru_ada_sigma=-1
         
             gal = gal.lens(float(row["tru_s1"]), float(row["tru_s2"]), 1.0)
             xjitter = vispixelscale*(ud() - 0.5)
@@ -324,11 +330,11 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             
             try:
                 try: # First we try defaults:
-                    res = galsim.hsm.FindAdaptiveMom(stamp, weight=None)
+                    res = galsim.hsm.FindAdaptiveMom(stamp, weight=None, guess_sigma=5.0*subsample_nbins)
                 except: # We change a bit the settings:
                     logger.debug("HSM defaults failed, retrying with larger sigma...")
                     hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
-                    res = galsim.hsm.FindAdaptiveMom(stamp, guess_sig=15.0, hsmparams=hsmparams, weight=None)                        
+                    res = galsim.hsm.FindAdaptiveMom(stamp, guess_sig=15.0*subsample_nbins, hsmparams=hsmparams, weight=None)                        
             
             except: # If this also fails, we give up:
                 logger.debug("Even the retry failed on:\n", exc_info = True)
@@ -343,14 +349,14 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             ada_sigma = res.moments_sigma
             ada_rho4 = res.moments_rho4
             centroid_shift=np.hypot(ada_x-stamp.true_center.x, ada_y-stamp.true_center.y)
-            if centroid_shift>3:
+            if centroid_shift>4:
                 counter+=1
                 break
                 #continue
             skymad=sky["mad"]
             aper=3
-            snr=(ada_flux*constants["realgain"][0])/(np.sqrt(ada_flux*constants["realgain"][0] + (np.pi*(ada_sigma*aper*1.1774)**2) * (skymad*constants["realgain"][0])**2))
-            features=[ada_flux, ada_sigma, ada_rho4, ada_g1,ada_g2, ada_x, ada_y,centroid_shift, skymad,snr, tru_ada_sigma]
+            snr=(ada_flux*constants["realgain"][0])/(np.sqrt(ada_flux*constants["realgain"][0] + (np.pi*(ada_sigma*aper*1.1774*(1./subsample_nbins))**2) * (skymad*constants["realgain"][0])**2))
+            features=[ada_flux, ada_sigma, ada_rho4, ada_g1,ada_g2, ada_x, ada_y,centroid_shift, skymad,snr, tru_ada_sigma, theta]
             #print(features, row["tru_mag"], row["bulge_r50"])
             dataux.append(features)
             if len(dataux)==2:
@@ -363,7 +369,7 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
         write_to_file(str(catid), blacklist)
         return
  
-    names =  [ "adamom_%s"%(n) for n in  [ "flux", "sigma","rho4", "g1", "g2","x", "y"] ]+["centroid_shift", "skymad", "snr", "tru_adamom_sigma"]
+    names =  [ "adamom_%s"%(n) for n in  [ "flux", "sigma","rho4", "g1", "g2","x", "y"] ]+["centroid_shift", "skymad", "snr", "tru_adamom_sigma", "tru_theta"]
     formats =['f4']*len(names)
     dtype = dict(names = names, formats=formats)
     outdata = np.recarray( (len(data), ), dtype=dtype)
@@ -475,7 +481,7 @@ def main():
         caseargs={"path":workdir, 'psfsourcecat':args.adamompsfcatalog,
                   "galscat":selected_flagshipcat, 'constants':constants,
                   "usevarpsf":args.usevarpsf, "usevarsky":args.usevarsky, "skycat":args.skycat,
-                  'tru_type':args.tru_type, "dist_type":"uniflagship", "max_shear": args.max_shear}
+                  'tru_type':args.tru_type, "dist_type":args.dist_type, "max_shear": args.max_shear}
         drawinputcat(args.ncat, **caseargs )
 
     inputcat=os.path.join(workdir, "casescat.fits")

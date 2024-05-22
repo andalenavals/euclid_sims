@@ -12,7 +12,7 @@ import copy
 import logging
 logger = logging.getLogger(__name__)
 
-def measfct(catalog, prefix="", fluxcol="adamom_flux", sigmacol="adamom_sigma", stdcol="skymad", sizecol=None, gain=None, gaincol=None, aper=3.0):
+def measfct(catalog, prefix="", fluxcol="adamom_flux", sigmacol="adamom_sigma", stdcol="skymad", sizecol=None, gain=None, gaincol=None, aper=3.0, subsample_nbins=1):
         """
         We assume here that the images are in ADU, and that 
         gain is given in electron / ADU.
@@ -54,7 +54,7 @@ def measfct(catalog, prefix="", fluxcol="adamom_flux", sigmacol="adamom_sigma", 
                 
         
         if sizecol is None:
-                areas = np.where(sum([output[sigmacol]==f for f in bad_flags]), -999, np.pi * (output[sigmacol] * aper * 1.1774) ** 2) # 1.1774 x sigma = r half light
+                areas = np.where(sum([output[sigmacol]==f for f in bad_flags]), -999, np.pi * (output[sigmacol] * aper * 1.1774*(1./subsample_nbins)) ** 2) # 1.1774 x sigma = r half light
         else: 
                 areas = np.where(sum([output[sizecol]==f for f in bad_flags]), -999,output[sizecol])
         

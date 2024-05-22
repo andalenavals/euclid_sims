@@ -9,4 +9,4 @@ CONSTANTS=$SCRIPTDIR/configfiles/simconstants.yaml
 
 cd $SCRIPTDIR
 
-python make_uniformtp.py --loglevel=INFO --workdir=$WORKDIR  --constants=$CONSTANTS --tru_type=2 --dist_type=uniflagship --ncpu=200 --ncat=5000 --skipdone --max_shear=0 --runadamom --drawcat --usevarpsf --usevarsky --skipdone --npairs=50 --patience=100 --subsample_nbins=2
+python make_uniformtp.py --loglevel=INFO --workdir=$WORKDIR  --constants=$CONSTANTS --tru_type=2 --dist_type=uniflagship --ncpu=200 --ncat=5000 --skipdone --max_shear=0 #--runadamom --drawcat --usevarpsf --usevarsky --skipdone --npairs=50 --patience=100 --subsample_nbins=2

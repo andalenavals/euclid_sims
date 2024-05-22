@@ -28,7 +28,7 @@ import momentsml
 from momentsml.tools.feature import Feature
 
 
-profiles=["Gaussian", "Sersic", "EBulgeDisk"]
+profiles=["Gaussian", "Sersic", "EBulgeDisk", "CosmosReal", "CosmosParam"]
 
 def drawsourceflagshipcat(sourcecat, catpath,  plotpath=None):
         cat=open_fits(sourcecat)
@@ -233,7 +233,7 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
 
 
        
-def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True):
+def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True, cosmoscatfile=None):
         '''
         constantshear: flag to determine whether or not there is a variable shear in a image
         '''
@@ -400,9 +400,19 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                         gal += disk
                                         
                                 gal = gal.rotate((90. + tru_theta) * galsim.degrees)
+
+                #elif profile_type == "CosmosParam":
+                        #gal=gasim.CosmosSomething(cosmoscatfile, index)
+
+                #elif profile_type == "CosmosReal":
+                        
+                        #gal=gasim.CosmosSomething(cosmoscatfile, index)
                         
                                 
                 else:
+                        
+
+                        
                         raise RuntimeError("Unknown galaxy profile!")
 
                 # And now we add lensing, if s1, s2 and mu are different from no lensing...

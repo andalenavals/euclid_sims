@@ -45,7 +45,7 @@ def append_measurements(meascat_dfs, measimg, nimgs,basename, cat_id,ext, label,
         meascat_dfs.append(meascat_df)
 
 #Only this one used at the moment    
-def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tru_s2"], label="adamom_", filename=None, rot_pair=False, stars=False, nsubcases=0, subcasecol=None, cattype="sex"):
+def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tru_s2"], label="adamom_", filename=None, base_pair=True, rot_pair=False, stars=False, nsubcases=0, subcasecol=None, cattype="sex"):
     '''
     cols2d: columns that change among realizations
     trucols: columns that are constant among realizations 
@@ -72,9 +72,10 @@ def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tr
         nimgs = max(trucat["img_id"]) + 1
         
         meascat_dfs=[]
-        append_measurements(meascat_dfs,measimg,nimgs,basename, cat_id,'', label, hdu=1)
-        if stars&(cattype=="tru"):
-            append_measurements(meascat_dfs,measimg,nimgs,basename, cat_id,'', label, hdu=2)
+        if base_pair:
+            append_measurements(meascat_dfs,measimg,nimgs,basename, cat_id,'', label, hdu=1)
+            if stars&(cattype=="tru"):
+                append_measurements(meascat_dfs,measimg,nimgs,basename, cat_id,'', label, hdu=2)
         if rot_pair:
             append_measurements(meascat_dfs,measimg,nimgs,basename, cat_id, '_rot', label, hdu=1)
             if stars&(cattype=="tru"):
@@ -109,8 +110,7 @@ def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tr
 
         cols2d=[col for col in cols2d if col in meascat_dfs[0].columns]
         if stars&(cattype=="tru"):
-            cols2d=list(set(cols2d +[col for col in cols2d if col in meascat_dfs[1].columns]))
-    
+            cols2d=list(set(cols2d +[col for col in cols2d if col in meascat_dfs[1].columns]))       
         #Keep only specific columns and ids for future getting 3d and 2d data
         if label == "adamom_":
             listcols=cols2d+cols1d+['flag']+['cat_id', 'img_id']
@@ -119,6 +119,7 @@ def cats_constimg(simdir, measdir, cols2d=["adamom_flux"], cols1d=["tru_s1", "tr
         elif label == "mf_":
             listcols=cols2d+cols1d+['cat_id', 'img_id']
         if nsubcases>0: listcols.append('subcase_id')
+
         alldata.append(imgsmeascats[listcols]) 
 
     alldata_df=pd.concat(alldata, ignore_index=True)

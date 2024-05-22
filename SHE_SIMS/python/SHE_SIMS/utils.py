@@ -10,6 +10,7 @@ import datetime
 import fitsio
 import yaml
 import ray
+import SHE_SIMS
 RAY=False
 if RAY:
     import ray.util.multiprocessing as multiprocessing
@@ -274,8 +275,8 @@ def read_integers_from_file(filename):
         
 def group_measurements(filename, inputcat, workdir, picklecat=True):
     logger.info("Grouping catalogs")
+    
     cat=open_fits(inputcat,hdu=1)
-
     alldata=[]
     for i, row in cat.iterrows():
          meascatfile=os.path.join(workdir,"cat%i.fits"%(i))
@@ -290,6 +291,8 @@ def group_measurements(filename, inputcat, workdir, picklecat=True):
     alldata_df=pd.concat(alldata, ignore_index=True)
     alldata_df=alldata_df.sort_values(by=['cat_id'], ignore_index=True)
     fitsio.write(filename,  alldata_df.to_records(index=False), clobber=True)
+    
+    #SHE_SIMS.meas.snr.measfct(filename, gain=3.48151, subsample_nbins=2)
     if picklecat: makepicklecat(filename, picklefilename=filename.replace(".fits",".pkl"))
     logger.info("Grouping catalogs finished!!")
 

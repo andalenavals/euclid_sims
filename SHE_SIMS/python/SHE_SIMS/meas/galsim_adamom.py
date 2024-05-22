@@ -19,15 +19,19 @@ import galsim
 
 profiles=["Gaussian", "Sersic", "EBulgeDisk"]
 RLIST=[10,15,20,25,30]
+#STAMPSIZE=128
+#STAMPSIZE=70
+STAMPSIZE=64
+#STAMPSIZE=32
+
 
 def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=True,use_weight=True, skystats=True, nmaskedpix=True, variant = "default", extra_cols=None, edgewidth=5, subsample_nbins=1, rot_pair=False, starflag=0):
         imagesize=img.array.shape[0]
         
-        sigs_stamp=10
-        stampsize=64
+        stampsize=STAMPSIZE
         # And loop
         data = []; data_sky=[]
-        
+        counter=0
         for i, gal in enumerate(catalog):
                 flag=0
                         
@@ -96,7 +100,7 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                                         if np.sum(masked_D) > 0:
                                                 r_nmpix = np.min(masked_D[np.nonzero(masked_D)])
                                         else:
-                                                logger.debug("Galaxy has not neighbors in the aperture of %i pixels"%(r))
+                                                #logger.debug("Galaxy has not neighbors in the aperture of %i pixels"%(r))
                                                 r_nmpix = r
 
                                 galseg = np.isin(img_seg_stamp.array,  [img_seg_stamp[center]] )*1
@@ -138,6 +142,31 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                                 if res.moments_rho4<=-1: continue
                         except: # If this also fails, we give up:
                                 logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)              
+                                continue
+                elif variant == "widersub":
+                        try:
+                                try: # First we try defaults:
+                                        res = galsim.hsm.FindAdaptiveMom(gps, weight=gps_w, guess_centroid=pos, guess_sig=5.0*subsample_nbins)
+                                except: # We change a bit the settings:
+                                        logger.debug("HSM defaults failed, retrying with larger sigma...")
+                                        hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
+                                        res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15.0*subsample_nbins, hsmparams=hsmparams, weight=gps_w,  guess_centroid=pos, round_moments=False)                 
+                                if res.moments_amp<0: continue
+                                if res.moments_rho4<=-1: continue
+                        except: # If this also fails, we give up:
+                                logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)              
+                                continue
+                elif variant == "widersub2":
+                        try:
+                                try: # First we try defaults:
+                                        res = galsim.hsm.FindAdaptiveMom(gps, weight=gps_w, guess_centroid=pos, guess_sig=5.0*subsample_nbins)
+                                except: # We change a bit the settings:
+                                        logger.debug("HSM defaults failed, retrying with larger sigma...")
+                                        hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000, max_amoment=5.0e6)
+                                        res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15*subsample_nbins, hsmparams=hsmparams, weight=gps_w,guess_centroid=pos, round_moments=False)                 
+                        except: # If this also fails, we give up:
+                                logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)
+                                counter+=1
                                 continue
                 
                 else:
@@ -370,18 +399,20 @@ def measure_withsex(imgfile, catname, xname="XWIN_IMAGE", yname="YWIN_IMAGE", va
                                 return None
 
        
-        sigs_stamp=10
-        min_stampsize=64; max_stampsize=128
-
+        #sigs_stamp=10
+        #min_stampsize=STAMPSIZE; max_stampsize=128
+        counter=0
+        
         # And loop
         data = []; data_sky=[]
         for j, gal in enumerate(catalog):
-                stampsize=int(sigs_stamp*gal["FLUX_RADIUS"])
+                #stampsize=int(sigs_stamp*gal["FLUX_RADIUS"])
+                stampsize=STAMPSIZE
 
-                if stampsize < min_stampsize:
-                        stampsize=min_stampsize
-                if stampsize > max_stampsize:
-                        stampsize=max_stampsize
+                #if stampsize < min_stampsize:
+                #        stampsize=min_stampsize
+                #if stampsize > max_stampsize:
+                #        stampsize=max_stampsize
 
                 flag=0
                         
@@ -446,7 +477,7 @@ def measure_withsex(imgfile, catname, xname="XWIN_IMAGE", yname="YWIN_IMAGE", va
                                         if np.sum(masked_D) > 0:
                                                 r_nmpix = np.min(masked_D[np.nonzero(masked_D)])
                                         else:
-                                                logger.debug("Galaxy has not neighbors in the aperture of %i pixels"%(r))
+                                                #logger.debug("Galaxy has not neighbors in the aperture of %i pixels"%(r))
                                                 r_nmpix = r
 
                                 galseg = np.isin(img_seg_stamp.array,  [img_seg_stamp[center]] )*1
@@ -484,6 +515,32 @@ def measure_withsex(imgfile, catname, xname="XWIN_IMAGE", yname="YWIN_IMAGE", va
 
                         except: # If this also fails, we give up:
                                 logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)              
+                                continue
+                elif variant == "widersub":
+                        try:
+                                try: # First we try defaults:
+                                        res = galsim.hsm.FindAdaptiveMom(gps, weight=gps_w, guess_centroid=pos, guess_sig=5.0*subsample_nbins)
+                                except: # We change a bit the settings:
+                                        logger.debug("HSM defaults failed, retrying with larger sigma...")
+                                        hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
+                                        res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15.0*subsample_nbins, hsmparams=hsmparams, weight=gps_w,  guess_centroid=pos, round_moments=False)                 
+                                if res.moments_amp<0: continue
+                                if res.moments_rho4<=-1: continue
+                        except: # If this also fails, we give up:
+                                logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)              
+                                continue
+                        
+                elif variant == "widersub2":
+                        try:
+                                try: # First we try defaults:
+                                        res = galsim.hsm.FindAdaptiveMom(gps, weight=gps_w, guess_centroid=pos, guess_sig=5.0*subsample_nbins)
+                                except: # We change a bit the settings:
+                                        logger.debug("HSM defaults failed, retrying with larger sigma...")
+                                        hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
+                                        res = galsim.hsm.FindAdaptiveMom(gps, guess_sig=15*subsample_nbins, hsmparams=hsmparams, weight=gps_w,guess_centroid=pos, round_moments=False)                 
+                        except: # If this also fails, we give up:
+                                logger.debug("Even the retry failed on:\n %s" % (str(gal)), exc_info = True)
+                                counter+=1
                                 continue
                 
                 else:
@@ -527,7 +584,7 @@ def measure_withsex(imgfile, catname, xname="XWIN_IMAGE", yname="YWIN_IMAGE", va
                         fields_names+=extra_cols
                         
                 data.append([gal_id, flag]+adamom_list)
-
+                
         if (len(data)==0):
                 logger.info("None of the detected galaxies was measured")
                 return

@@ -9,7 +9,10 @@ SIMDIR=$WORKDIR/sim
 SEXDIR=$WORKDIR/sex1.0
 #ADAMOMDIR=$WORKDIR/adamom_sexcat_nw_ss
 #ADAMOMDIR=$WORKDIR/adamom_trucat_nw_ss
-ADAMOMDIR=$WORKDIR/adamom_sexcat_nw_ss_sub2
+#ADAMOMDIR=$WORKDIR/adamom_sexcat_nw_ss_sub2
+#ADAMOMDIR=$WORKDIR/adamom_sexcat_nw_ss_sub2_biguesig
+#ADAMOMDIR=$WORKDIR/adamom_trucat_nw_ss_sub2_biguesig_stamp
+ADAMOMDIR=$WORKDIR/adamom_sexcat_nw_ss_sub2_biguesig_fixestamp
 #ADAMOMDIR=$WORKDIR/adamom_trucat_nw_ss_sub2
 KSBDIR=$WORKDIR/ksb_trucat_nw
 GROUPCATS=groupcat.fits
@@ -19,7 +22,7 @@ SEX_ARGS=$SCRIPTDIR/configfiles/sexconfigfiles/oldsexconf.yaml
 CONSTANTS=$SCRIPTDIR/configfiles/simconstants.yaml
 cd $SCRIPTDIR
 
-python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --transformtogriddir=$BLENDEDDIR --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --dist_type=flagship --cattype=sex --ncpu=100 --ncat=2000 --typegroup=tw --skipdone --substractsky --transformtogrid --subsample_nbins=2 --runadamom --rot_pair #--matchinput --rot_pair #--runsims --usepsfimg --usevarpsf --usevarsky --runsex #--run_check #--use_weight 
+python run_sim_meas_constimg_euclidlike.py --loglevel=DEBUG --transformtogriddir=$BLENDEDDIR --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --dist_type=flagship --cattype=sex --ncpu=100 --ncat=2000 --typegroup=tw --skipdone --substractsky --transformtogrid --subsample_nbins=2 --runadamom --rot_pair #--matchinput --match_pairs  #--rot_pair #--runsims --usepsfimg --usevarpsf --usevarsky --runsex #--run_check #--use_weight 
 
 
 

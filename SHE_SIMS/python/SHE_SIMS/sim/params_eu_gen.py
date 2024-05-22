@@ -110,7 +110,8 @@ def uniflagshipdraw(ind, sourcecat=None, constants=None):
         tru_disk_scaleheight=float(row["disk_scalelength"])
         dominant_shape=row["dominant_shape"]
         bulge_axis_ratio=row["bulge_axis_ratio"]
-        return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio 
+        #cosmos_index=row["cosmos_index"]
+        return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio#, cosmos_index
 
 def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
 
@@ -255,6 +256,8 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
                         dominant_shape=row["dominant_shape"]
                         bulge_axis_ratio=float(row["bulge_axis_ratio"])
 
+                
+
                 tru_bulge_sersicn = tru_sersicn_func(tru_bulge_sersicn_tmp) 
 
     
@@ -274,6 +277,7 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
                        "disk_scalelength":tru_disk_scaleheight,
                        "dominant_shape":dominant_shape,
                        "bulge_axis_ratio":bulge_axis_ratio,
+                       #"cosmos_index":row["cosmos_index"],
                 }
         return out
 
@@ -324,6 +328,7 @@ def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constant
                         tru_sersicn_tmp=rows["bulge_nsersic"]
                         tru_rad=rows["bulge_r50"]
                         bulge_axis_ratio=rows["bulge_axis_ratio"]
+
 
                 tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
                 tru_sersicn = np.vectorize(tru_sersicn_func)(tru_sersicn_tmp)
@@ -391,6 +396,7 @@ def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constant
                        "disk_scalelength":tru_disk_scaleheight,
                        "dominant_shape":dominant_shape,
                        "bulge_axis_ratio":bulge_axis_ratio,
+                       #"cosmos_index":row["cosmos_index"],
                 }
         return out
 

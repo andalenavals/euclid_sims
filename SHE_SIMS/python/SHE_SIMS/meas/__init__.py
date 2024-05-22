@@ -14,3 +14,4 @@ from . import utils
 from . import ngmix
 from . import match
 from . import highermoments
+from . import hlr

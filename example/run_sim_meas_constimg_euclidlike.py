@@ -121,8 +121,11 @@ def parse_args():
     # SETUPS ARGs
     
     parser.add_argument('--adamompsfcatalog',
-                        default='/vol/euclid2/euclid2_raid2/aanavarroa/catalogs/MomentsML/fullimages_constimg_euclid/all_adamom_Lance_Jan_2020.fits', 
+                        default='/vol/euclid2/euclid2_raid2/aanavarroa/catalogs/MomentsML/fullimages_constimg_euclid/all_adamom_Lance_Jan_2020.fits',
                         help='diractory of work')
+    parser.add_argument('--cosmocatfile',
+                        default=None,
+                        help='Cosmos catalog gile')
     parser.add_argument('--runsims', default=False,
                         action='store_const', const=True, help='Global flag for running only sims')
     parser.add_argument('--runsex', default=False,
@@ -137,6 +140,8 @@ def parse_args():
                         action='store_const', const=True, help='Global flag for running only ksb')
     parser.add_argument('--runneis', default=False,
                         action='store_const', const=True, help='Add neighbor features to catalogs')
+    parser.add_argument('--runhlr', default=False,
+                        action='store_const', const=True, help='Add input hlr to catalog')
     parser.add_argument('--matchinput', default=False,
                         action='store_const', const=True, help='Add input features to meas cat matching')
     parser.add_argument('--stars', default=False,
@@ -162,21 +167,25 @@ def parse_args():
 
 
 
-def group_measurements(filename, simdir, measdir, match_pairs, rot_pair, cols2d, cols1d, typegroup, nsubcases, constants=None, sexellip=True, picklecat=True, stars=False, cattype="tru"):
+def group_measurements(filename, simdir, measdir, match_pairs, rot_pair, cols2d, cols1d, typegroup, nsubcases, constants=None, sexellip=True, picklecat=True, stars=False, cattype="tru",subsample_nbins=1):
     #gal_density is include here while grouping
+    
     if nsubcases>1:
         filename = filename.replace('.fits', '_subcase_ics2.fits')
+        if rot_pair: filename = filename.replace('.fits', '_rotpair.fits')
         SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, rot_pair=rot_pair, stars=stars, nsubcases=nsubcases, subcasecol='ICS2', cattype=cattype)
     else:
-        if match_pairs&(cattype=="sex"):
+        if match_pairs:#(cattype=="sex"):
             filename = filename.replace(".fits", "_matchpairs.fits")
             SHE_SIMS.group.cats_constimg_rotpair(simdir, measdir, cols2d=cols2d,cols1d=cols1d, stars=stars, filename=filename, cattype=cattype)
         else:
             if rot_pair: filename = filename.replace('.fits', '_rotpair.fits')
             SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, rot_pair=rot_pair, stars=stars, cattype=cattype)
+            #if rot_pair: filename = filename.replace('.fits', '_rotpaironly.fits')
+            #SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, base_pair=False, rot_pair=rot_pair, stars=stars, cattype=cattype)
 
     #snr to the catalog
-    SHE_SIMS.meas.snr.measfct(filename, gain=constants["realgain"])
+    SHE_SIMS.meas.snr.measfct(filename, gain=constants["realgain"], subsample_nbins=subsample_nbins)
 
     #SHE_SIMS.meas.snr.add_fluxsnr(filename) /it is the same that SNR_WIN
     #SHE_SIMS.meas.galsim_adamom.add_mag(filename)
@@ -185,6 +194,7 @@ def group_measurements(filename, simdir, measdir, match_pairs, rot_pair, cols2d,
         SHE_SIMS.meas.sex.add_ellipsepars(filename)
     
     
+    logger.info("Pickling catalog")
     if picklecat: SHE_SIMS.utils.makepicklecat(filename, typecat=typegroup, picklefilename=filename.replace(".fits",".pkl"),matchpairs=match_pairs)
     
     
@@ -281,7 +291,7 @@ def main():
         #gsparams = galsim.GSParams(maximum_fft_size=100000)
         gsparams = None
         constantshear= not args.usevarshear
-        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear}
+        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile}
 
         #print("used drawcatkwargs")
         #print(drawcatkwargs)
@@ -292,9 +302,12 @@ def main():
         if args.runneis:
             neicols=["tru_flux","tru_rad", "tru_mag"]
             SHE_SIMS.meas.neighbors.measfct_trucat(simdir,ext='_cat.fits', cols=neicols,  n_neis=2, xname ='x', yname='y', r_label='tru_r', hdu=1, skipdone=args.skipdone, ncpu=args.ncpu)
-        
 
+
+    if args.runhlr:
+        SHE_SIMS.meas.hlr.meas(simdir,ext='_cat.fits', ncpu=args.ncpu)
     #if args.add_ics: SHE_SIMS.meas.neighbors.add_trueics(simdir)
+                        
     
     # RUNNING SEXTRACTOR
     if (args.runsex)|(args.runsexpp):
@@ -326,7 +339,8 @@ def main():
         if args.usevarshear:
             extracols+=["tru_s1", "tru_s2"]
             cols2d+=["tru_s1", "tru_s2"]
-        measkwargs={"variant":"wider","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5, "subsample_nbins":args.subsample_nbins }
+        #measkwargs={"variant":"wider","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5, "subsample_nbins":args.subsample_nbins }
+        measkwargs={"variant":"widersub2","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5, "subsample_nbins":args.subsample_nbins }
         if args.cattype=="tru": measkwargs.update({"stars":args.stars})
         print(measkwargs)
 
@@ -354,7 +368,7 @@ def main():
 
         picklecat=True
         if args.usevarshear: picklecat=False
-        group_measurements(filename, simdir, adamomdir, args.match_pairs, args.rot_pair, cols2d, cols1d, args.typegroup, args.nsubcases, constants=constants, sexellip=sexellip, picklecat=picklecat, stars=args.stars, cattype=args.cattype)
+        group_measurements(filename, simdir, adamomdir, args.match_pairs, args.rot_pair, cols2d, cols1d, args.typegroup, args.nsubcases, constants=constants, sexellip=sexellip, picklecat=picklecat, stars=args.stars, cattype=args.cattype, subsample_nbins=args.subsample_nbins)
 
         if args.usevarshear:
             cols1d.remove("tru_s1")
