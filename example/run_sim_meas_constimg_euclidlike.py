@@ -123,9 +123,12 @@ def parse_args():
     parser.add_argument('--adamompsfcatalog',
                         default='/vol/euclid2/euclid2_raid2/aanavarroa/catalogs/MomentsML/fullimages_constimg_euclid/all_adamom_Lance_Jan_2020.fits',
                         help='diractory of work')
-    parser.add_argument('--cosmocatfile',
+    parser.add_argument('--cosmoscatfile',
                         default=None,
-                        help='Cosmos catalog gile')
+                        help='Cosmos catalog file parametric')
+    parser.add_argument('--cosmoscatdir',
+                        default=None,
+                        help='Cosmos catalog directory with the stamps')
     parser.add_argument('--runsims', default=False,
                         action='store_const', const=True, help='Global flag for running only sims')
     parser.add_argument('--runsex', default=False,
@@ -291,7 +294,7 @@ def main():
         #gsparams = galsim.GSParams(maximum_fft_size=100000)
         gsparams = None
         constantshear= not args.usevarshear
-        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile}
+        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile, "cosmosdir":args.cosmoscatdir}
 
         #print("used drawcatkwargs")
         #print(drawcatkwargs)
