@@ -4,6 +4,9 @@ import random
 import astropy.io.fits as fits
 import copy
 import yaml
+import logging
+logger = logging.getLogger(__name__)
+
 
 def tru_sersicn_func(tru_sersicn_tmp):
         tru_sersicns = np.linspace(0.3, 6.0, 21)
@@ -110,9 +113,9 @@ def uniflagshipdraw(ind, sourcecat=None, constants=None):
         tru_disk_scaleheight=float(row["disk_scalelength"])
         dominant_shape=row["dominant_shape"]
         bulge_axis_ratio=row["bulge_axis_ratio"]
-        return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio
-def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
+        return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio#, cosmos_index
 
+def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None, scalefactor=1.0, scalefield=None):
         exptime=constants["exptime"]
         gain=constants["gain"]
         zeropoint=constants["zeropoint"]
@@ -258,6 +261,13 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
 
                 tru_bulge_sersicn = tru_sersicn_func(tru_bulge_sersicn_tmp) 
 
+                if scalefield=="bulge_axis_ratio":
+                        logger.info("bulge axis ratio scaled with factor %.2f"%(scalefactor))
+                        bulge_axis_ratio*=scalefactor
+                if scalefield=="r50":
+                        logger.info("r50 scaled with factor %.2f"%(scalefactor))
+                        tru_bulge_rad*=scalefactor
+                        tru_disk_rad*=scalefactor
     
                 out = {"tru_mag": tru_mag,
                        "tru_flux":tru_flux,
@@ -368,7 +378,7 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
         return out
 
 #juxst more efficient draw to avoid looping
-def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
+def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constants=None, scalefactor=1.0, scalefield=None):
         exptime=constants["exptime"]
         gain=constants["gain"]
         zeropoint=constants["zeropoint"]
@@ -465,7 +475,17 @@ def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constant
 
                 tru_bulge_sersicn = np.vectorize(tru_sersicn_func)(tru_bulge_sersicn_tmp)
                 #tru_sersicn = tru_bulge_sersicn_tmp
-    
+
+                if scalefield=="bulge_axis_ratio":
+                        logger.info("bulge axis ratio scaled with factor %.2f"%(scalefactor))
+                        bulge_axis_ratio*=scalefactor
+                        bulge_axis_ratio=np.clip(bulge_axis_ratio, 0,1)
+                if scalefield=="r50":
+                        logger.info("r50 scaled with factor %.2f"%(scalefactor))
+                        tru_bulge_rad*=scalefactor
+                        tru_disk_rad*=scalefactor
+                        
+                        
                 out = {"tru_mag": tru_mag,
                        "tru_flux":tru_flux,
                        "bulge_ellipticity":tru_bulge_g,
