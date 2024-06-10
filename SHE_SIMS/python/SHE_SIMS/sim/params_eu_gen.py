@@ -110,9 +110,7 @@ def uniflagshipdraw(ind, sourcecat=None, constants=None):
         tru_disk_scaleheight=float(row["disk_scalelength"])
         dominant_shape=row["dominant_shape"]
         bulge_axis_ratio=row["bulge_axis_ratio"]
-        cosmos_index=row["cosmos_index"]
-        return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio#, cosmos_index
-
+        return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio
 def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
 
         exptime=constants["exptime"]
