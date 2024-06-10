@@ -405,20 +405,41 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                         gal += disk
                                         
                                 gal = gal.rotate((90. + tru_theta) * galsim.degrees)
-
-                #elif profile_type == "CosmosParam":
-                #cosmospath=os.path.join(cosmosdir, cosmoscatfile)
-                        #gal=gasim.CosmosSomething(cosmoscatfile, index)
-
-                #elif profile_type == "CosmosReal":
-                        
-                        #gal=gasim.CosmosSomething(cosmoscatfile, dir=cosmosdir,  index)
-                        
-                                
+                
+                elif profile_type == "CosmosReal":
+                        cosmospath=os.path.join(cosmosdir, cosmoscatfile)
+                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', exptime=565, area=9926) 
+                        '''
+                        exclusion_level='none' includes all images, no internal selection done by COSMOSCatalog.
+                        Leaving out this parameter results in ~81k galaxies used instead of all 87k.
+                        Refer to: http://galsim-developers.github.io/GalSim/_build/html/real_gal.html#galsim.COSMOSCatalog
+                                                
+                        exptime and area are the exposure time and effective collecting area for Euclid.
+                        Refer to: http://galsim-developers.github.io/GalSim/_build/html/real_gal.html#galsim.GalaxySample.makeGalaxy
+                        '''
+                        if const_cat["snc_type"][0]==0:
+                                index=int(row['cosmos_index'])
+                        else:
+                                index=int(const_cat['cosmos_index'][0])
+                        gal = galaxy_catalog.makeGalaxy(index, gal_type='real')
+                        tru_theta=float(row["tru_theta"])
+                        gal = gal.rotate((90. + tru_theta) * galsim.degrees)                        
+                                        
+                elif profile_type == "CosmosParam":
+                        cosmospath=os.path.join(cosmosdir, cosmoscatfile)
+                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none',use_real='False', exptime=565, area=9926)  
+                        '''
+                        use_real=False prevents drawing images of real galaxies. Not necessary but used for optimization purposes.
+                        '''
+                        if const_cat["snc_type"][0]==0:
+                                index=int(row['cosmos_index'])
+                        else:
+                                index=int(const_cat['cosmos_index'][0])
+                        gal = galaxy_catalog.makeGalaxy(index, gal_type='parametric')
+                        tru_theta=float(row["tru_theta"])
+                        gal = gal.rotate((90. + tru_theta) * galsim.degrees)                        
                 else:
-                        
-
-                        
+                                                
                         raise RuntimeError("Unknown galaxy profile!")
 
                 # And now we add lensing, if s1, s2 and mu are different from no lensing...
