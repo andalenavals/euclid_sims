@@ -126,7 +126,7 @@ def parse_args():
     parser.add_argument('--cosmoscatfile',
                         default=None,
                         help='Cosmos catalog file parametric')
-    parser.add_argument('--cosmoscatdir',
+    parser.add_argument('--cosmosdir',
                         default=None,
                         help='Cosmos catalog directory with the stamps')
     parser.add_argument('--runsims', default=False,
@@ -270,6 +270,7 @@ def main():
     
         if (args.dist_type=='flagship')|(args.dist_type=='uniflagship'):
             original_sourceflagshipcat = args.flagshippath # to read
+            
             if args.selected_flagshipcat is None:
                 selected_flagshipcat = os.path.join(simdir, "selectedflagship.fits") #towrite
                 plotpath = os.path.join(simdir)
@@ -282,7 +283,7 @@ def main():
                 SHE_SIMS.sim.run_constimg_eu.drawsourceflagshipcat(original_sourceflagshipcat,selected_flagshipcat , plotpath)
 
         drawcatkwargs.update(extra_caseargs)
-
+        
         if args.transformtogrid:
             logger.info("Using existing catalogs in %s to transform position to a grid"%(args.transformtogriddir))
             SHE_SIMS.sim.run_constimg_eu.transformtogrid(args.transformtogriddir, simdir, drawcatkwargs)
@@ -294,7 +295,7 @@ def main():
         #gsparams = galsim.GSParams(maximum_fft_size=100000)
         gsparams = None
         constantshear= not args.usevarshear
-        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile, "cosmosdir":args.cosmoscatdir}
+        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile, "cosmosdir":args.cosmosdir}
 
         #print("used drawcatkwargs")
         #print(drawcatkwargs)

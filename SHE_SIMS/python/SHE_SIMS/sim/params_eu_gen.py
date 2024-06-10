@@ -110,7 +110,7 @@ def uniflagshipdraw(ind, sourcecat=None, constants=None):
         tru_disk_scaleheight=float(row["disk_scalelength"])
         dominant_shape=row["dominant_shape"]
         bulge_axis_ratio=row["bulge_axis_ratio"]
-        #cosmos_index=row["cosmos_index"]
+        cosmos_index=row["cosmos_index"]
         return  tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio#, cosmos_index
 
 def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
@@ -279,6 +279,94 @@ def draw(tru_type=1, dist_type="gems",  sourcecat=None, constants=None):
                        "bulge_axis_ratio":bulge_axis_ratio,
                        #"cosmos_index":row["cosmos_index"],
                 }
+        
+
+        elif((tru_type==3)|(tru_type==4)): #if CosmosReal or CosmosParam
+                if (dist_type == "uni"):
+                        """
+                        Uniform only distributions -- can this work ?
+                        """
+                        tru_disk_rad = np.random.uniform(0.1, 1.0) # in arcsec    
+                        tru_bulge_rad = np.random.uniform(0.1, 1.0) # in arcsec
+                        tru_mag = np.random.uniform(20.5, 25.0)
+                        #tru_mag = np.random.uniform(20.0, 26.0)
+                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint)) #in ADU
+                        tru_bulge_g = trunc_rayleigh(0.25, 0.7)
+                        tru_theta = 2.0 * np.pi * np.random.uniform(0.0, 1.0)   
+
+                        tru_bulge_sersicn_tmp = np.random.uniform(0.5, 6.0)
+
+                elif (dist_type == "uniflagship"):
+                        with fits.open(sourcecat) as hdul:
+                                cat=hdul[1].data
+                                hdul.close()
+
+                        leng=0
+                        while leng==0:
+                                auxcat=get_cat_nolims(copy.deepcopy(cat), nbins=25)
+                                leng=len(auxcat)
+                        
+                        row = random.choice(auxcat)
+                        tru_mag = row["tru_mag"]
+                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
+                        tru_bulge_g=float(row["bulge_ellipticity"])
+                        tru_theta=row["disk_angle"]
+                        (tru_bulge_g1, tru_bulge_g2) = (tru_bulge_g*np.cos(2.0 * tru_theta*(np.pi/180.)), tru_bulge_g * np.sin(2.0 * tru_theta*(np.pi/180.)))
+                        tru_bulge_flux=float(row["bulge_fraction"]*tru_flux)
+                        tru_bulge_sersicn_tmp=float(row["bulge_nsersic"])
+                        tru_bulge_rad=float(row["bulge_r50"])
+                        tru_disk_rad=float(row["disk_r50"])
+                        tru_disk_flux=float((1-row["bulge_fraction"])*tru_flux)
+                        tru_disk_inclination=float(row["inclination_angle"])#* galsim.degrees
+                        tru_disk_scaleheight=float(row["disk_scalelength"])
+                        dominant_shape=row["dominant_shape"]
+                        bulge_axis_ratio=float(row["bulge_axis_ratio"])
+
+
+                elif(dist_type == "flagship"):
+                        with fits.open(sourcecat) as hdul:
+                                cat=hdul[1].data
+                                hdul.close()
+                        row = random.choice(cat)
+                        tru_mag = row["tru_mag"]
+                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
+                        tru_bulge_g=float(row["bulge_ellipticity"])
+                        tru_theta=row["disk_angle"]
+                        (tru_bulge_g1, tru_bulge_g2) = (tru_bulge_g*np.cos(2.0 * tru_theta*(np.pi/180.)), tru_bulge_g * np.sin(2.0 * tru_theta*(np.pi/180.)))
+                        tru_bulge_flux=float(row["bulge_fraction"]*tru_flux)
+                        tru_bulge_sersicn_tmp=float(row["bulge_nsersic"])
+                        tru_bulge_rad=float(row["bulge_r50"])
+                        tru_disk_rad=float(row["disk_r50"])
+                        tru_disk_flux=float((1-row["bulge_fraction"])*tru_flux)
+                        tru_disk_inclination=float(row["inclination_angle"])#* galsim.degrees
+                        tru_disk_scaleheight=float(row["disk_scalelength"])
+                        dominant_shape=row["dominant_shape"]
+                        bulge_axis_ratio=float(row["bulge_axis_ratio"])
+
+                
+
+                tru_bulge_sersicn = tru_sersicn_func(tru_bulge_sersicn_tmp) 
+
+    
+                out = {"tru_mag": tru_mag,
+                       "tru_flux":tru_flux,
+                       "bulge_ellipticity":tru_bulge_g,
+                       "tru_theta":tru_theta,
+                       "disk_angle":tru_theta,
+                       "tru_g1":tru_bulge_g1,
+                       "tru_g2":tru_bulge_g2,
+                       "tru_bulge_flux":tru_bulge_flux,
+                       "bulge_nsersic":tru_bulge_sersicn,
+                       "bulge_r50":tru_bulge_rad,
+                       "disk_r50":tru_disk_rad,
+                       "tru_disk_flux":tru_disk_flux,
+                       "inclination_angle": tru_disk_inclination,
+                       "disk_scalelength":tru_disk_scaleheight,
+                       "dominant_shape":dominant_shape,
+                       "bulge_axis_ratio":bulge_axis_ratio,
+                       "cosmos_index":row["cosmos_index"],
+                }
+             
         return out
 
 #juxst more efficient draw to avoid looping
@@ -396,7 +484,62 @@ def draw_sample(nsamples,tru_type=1, dist_type="gems",  sourcecat=None, constant
                        "disk_scalelength":tru_disk_scaleheight,
                        "dominant_shape":dominant_shape,
                        "bulge_axis_ratio":bulge_axis_ratio,
-                       #"cosmos_index":row["cosmos_index"],
+                }
+        elif((tru_type==3)|(tru_type==4)):  #if CosmosReal or CosmosParam
+                if (dist_type == "uni"):
+                        """
+                        Uniform only distributions TODO
+                        """
+          
+                        tru_mag = np.random.uniform(20.5, 25.0, size=nsamples)
+                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
+                        tru_bulge_g = np.vectorize( trunc_rayleigh)([0.25]*nsamples, 0.7)
+                        tru_theta = 2.0 * np.pi * np.random.uniform(0.0, 1.0, size=nsamples)   
+
+                        tru_sersicn_tmp = np.random.uniform(0.5, 6.0, size=nsamples)
+                elif (dist_type == "uniflagship"):
+                       tru_mag, tru_flux, tru_bulge_g, tru_theta, tru_bulge_g1, tru_bulge_g2, tru_bulge_flux, tru_bulge_sersicn_tmp, tru_bulge_rad, tru_disk_rad, tru_disk_flux,tru_disk_inclination, tru_disk_scaleheight , dominant_shape, bulge_axis_ratio = np.vectorize(uniflagshipdraw)(np.arange(nsamples), sourcecat=sourcecat, constants=constants)
+
+                elif(dist_type == "flagship"):
+                        with fits.open(sourcecat) as hdul:
+                                cat=hdul[1].data
+                                hdul.close()
+                        row = np.random.choice(cat, size=nsamples)
+                        tru_mag = row["tru_mag"]
+                        tru_flux =  (exptime / gain) * 10**(-0.4*(tru_mag - zeropoint))
+                        tru_bulge_g=row["bulge_ellipticity"]
+                        tru_theta=row["disk_angle"]
+                        (tru_bulge_g1, tru_bulge_g2) = (tru_bulge_g*np.cos(2.0 * tru_theta*(np.pi/180.)), tru_bulge_g * np.sin(2.0 * tru_theta*(np.pi/180.)))
+                        tru_bulge_flux=row["bulge_fraction"]*tru_flux
+                        tru_bulge_sersicn_tmp=row["bulge_nsersic"]
+                        tru_bulge_rad=row["bulge_r50"]
+                        tru_disk_rad=row["disk_r50"]
+                        tru_disk_flux=(1-row["bulge_fraction"])*tru_flux
+                        tru_disk_inclination=row["inclination_angle"] #* galsim.degrees
+                        tru_disk_scaleheight=row["disk_scalelength"]
+                        dominant_shape=row["dominant_shape"]
+                        bulge_axis_ratio=row["bulge_axis_ratio"]
+
+                tru_bulge_sersicn = np.vectorize(tru_sersicn_func)(tru_bulge_sersicn_tmp)
+                #tru_sersicn = tru_bulge_sersicn_tmp
+    
+                out = {"tru_mag": tru_mag,
+                       "tru_flux":tru_flux,
+                       "bulge_ellipticity":tru_bulge_g,
+                       "tru_theta":tru_theta,
+                       "disk_angle":tru_theta,
+                       "tru_g1":tru_bulge_g1,
+                       "tru_g2":tru_bulge_g2,
+                       "tru_bulge_flux":tru_bulge_flux,
+                       "bulge_nsersic":tru_bulge_sersicn,
+                       "bulge_r50":tru_bulge_rad,
+                       "disk_r50":tru_disk_rad,
+                       "tru_disk_flux":tru_disk_flux,
+                       "inclination_angle": tru_disk_inclination,
+                       "disk_scalelength":tru_disk_scaleheight,
+                       "dominant_shape":dominant_shape,
+                       "bulge_axis_ratio":bulge_axis_ratio,
+                       "cosmos_index":row["cosmos_index"],
                 }
         return out
 
