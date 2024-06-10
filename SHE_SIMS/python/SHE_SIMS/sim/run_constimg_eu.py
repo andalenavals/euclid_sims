@@ -51,7 +51,7 @@ def drawsourceflagshipcat(sourcecat, catpath,  plotpath=None):
         fitsio.write(catpath, cat, clobber=True)
         
 
-def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min=5, nstar_max=20, nstar_nbins=5, nimgs=None, ntotal_gal=None,  imagesize=None,  snc=True, mode='grid', tru_type=2, constants=None, dist_type='flagship',sourcecat=None, starsourcecat=None, psfsourcecat=None, usevarpsf=False, sky_vals=None,fixorientation=False, max_shear=0.05, filename=None,  ):
+def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min=5, nstar_max=20, nstar_nbins=5, nimgs=None, ntotal_gal=None,  imagesize=None,  snc=True, mode='grid', tru_type=2, constants=None, dist_type='flagship',sourcecat=None, starsourcecat=None, psfsourcecat=None, usevarpsf=False, sky_vals=None,fixorientation=False, max_shear=0.05, filename=None, scalefactor=1.0, scalefield=None  ):
         '''
         ngal: number of galaxies per image
         nstars: number of stars per image
@@ -121,7 +121,10 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                 sncrot = 180.0/float(nreas) #rot angle
                 logger.info("Drawing a catalog of %i SNC version of the same galaxy distributed on %i images ..." %(nreas, nimgs))
 
-                gal= params_eu_gen.draw(tru_type=tru_type, dist_type=dist_type,  sourcecat=sourcecat, constants=constants)
+                gal= params_eu_gen.draw(tru_type=tru_type,
+                                        dist_type=dist_type, sourcecat=sourcecat,
+                                        constants=constants, scalefactor=scalefactor,
+                                        scalefield=scalefield)
                 x_list, y_list=params_eu_gen.draw_position_sample(nimgs*ngal, imagesize, ngals=ngal, mode=mode)
         else:
                 logger.info("Drawing a catalog of %i truly different galaxies distributed on %i images ..." %(nreas, nimgs))
@@ -138,7 +141,9 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                         x_list, y_list=params_eu_gen.draw_position_sample(nreas, imagesize, ngals=ngal, mode=mode)
                         if (nstar>0): x_list_star, y_list_star=params_eu_gen.draw_position_sample(nreas_star, imagesize, ngals=nstar, mode=mode)
 
-                gal= params_eu_gen.draw_sample(nreas,tru_type=tru_type,  dist_type=dist_type, sourcecat=sourcecat, constants=constants)
+                gal=params_eu_gen.draw_sample(nreas,tru_type=tru_type,
+                                          dist_type=dist_type, sourcecat=sourcecat,
+                                          constants=constants, scalefactor=scalefactor, scalefield=scalefield)
                 if (nstar>0): star= params_eu_gen.draw_sample_star(nreas_star, sourcecat=sourcecat, constants=constants )
         
                 if nstar==ngal:

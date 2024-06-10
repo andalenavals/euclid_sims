@@ -85,6 +85,12 @@ def parse_args():
     parser.add_argument('--max_shear',
                         default=0.05, type=float, 
                         help='max shear value in sims')
+    parser.add_argument('--scalefactor',
+                        default=1.0, type=float, 
+                        help='Scale factor for some of the fields. Sensitivity testing')
+    parser.add_argument('--scalefield',
+                        default=None, 
+                        help='Which field to scale. Sensitivity testing.')
     
     
     # SEX ARGs
@@ -266,7 +272,7 @@ def main():
         
     #DRAW SIMULATION CATS AND IMAGES
     if (args.runsims):
-        extra_caseargs={'dist_type':args.dist_type, 'psfsourcecat':args.adamompsfcatalog, 'tru_type':args.tru_type, "max_shear": args.max_shear, 'constants':constants, 'usevarpsf':args.usevarpsf}
+        extra_caseargs={'dist_type':args.dist_type, 'psfsourcecat':args.adamompsfcatalog, 'tru_type':args.tru_type, "max_shear": args.max_shear, 'constants':constants, 'usevarpsf':args.usevarpsf, 'scalefield':args.scalefield, 'scalefactor':args.scalefactor}
     
         if (args.dist_type=='flagship')|(args.dist_type=='uniflagship'):
             original_sourceflagshipcat = args.flagshippath # to read
