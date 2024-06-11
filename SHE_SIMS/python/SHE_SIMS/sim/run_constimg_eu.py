@@ -404,11 +404,11 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                                                           gsparams = gsparams)
                                         gal += disk
                                         
-                                gal = gal.rotate((90. + tru_theta) * galsim.degrees)
+                                gal = gal.rotate(tru_theta* galsim.degrees)
                 
                 elif profile_type == "CosmosReal":
                         cosmospath=os.path.join(cosmosdir, cosmoscatfile)
-                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', exptime=565, area=9926) 
+                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', exptime=float(const_cat["exptime"][0]), area=9926) 
                         '''
                         exclusion_level='none' includes all images, no internal selection done by COSMOSCatalog.
                         Leaving out this parameter results in ~81k galaxies used instead of all 87k.
@@ -423,11 +423,11 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(const_cat['cosmos_index'][0])
                         gal = galaxy_catalog.makeGalaxy(index, gal_type='real')
                         tru_theta=float(row["tru_theta"])
-                        gal = gal.rotate((90. + tru_theta) * galsim.degrees)                        
+                        gal = gal.rotate(tru_theta* galsim.degrees)                        
                                         
                 elif profile_type == "CosmosParam":
                         cosmospath=os.path.join(cosmosdir, cosmoscatfile)
-                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none',use_real='False', exptime=565, area=9926)  
+                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none',use_real='False', exptime=float(const_cat["exptime"][0]), area=9926)  
                         '''
                         use_real=False prevents drawing images of real galaxies. Not necessary but used for optimization purposes.
                         '''
@@ -437,7 +437,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(const_cat['cosmos_index'][0])
                         gal = galaxy_catalog.makeGalaxy(index, gal_type='parametric')
                         tru_theta=float(row["tru_theta"])
-                        gal = gal.rotate((90. + tru_theta) * galsim.degrees)                        
+                        gal = gal.rotate(tru_theta * galsim.degrees)                        
                 else:
                                                 
                         raise RuntimeError("Unknown galaxy profile!")
