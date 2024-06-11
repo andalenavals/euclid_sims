@@ -48,9 +48,9 @@ logger = logging.getLogger(__name__)
 ### RUN KSB on SIM ###
 ###########################
 
-def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galimg', catsdir=None):
+def makeksbworkerlist(simdir, measdir, sexdir, measkwargs, ext='_galimg', catsdir=None):
         wslist = []
-        if cattype=='sex':
+        if measkwargs["cattype"]=='sex':
                 logger.info("Using sextractor catalog (positions) for getting galsim_KSB")
                 if sexdir is None:
                         raise
@@ -66,7 +66,7 @@ def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galim
                         constcat=fitsio.read(catfilename, ext=2)
                         nimgs=constcat['nimgs'][0]
                         tru_type=constcat['tru_type'][0]
-                        psffile=str(constcat['psf_file'][0])
+                        psffile=os.path.join(str(constcat['psf_path'][0]),str(constcat['psf_file'][0]))
                         
                         name=os.path.basename(folder) 
                         imgdir_meas=os.path.join(measdir, name )
@@ -126,7 +126,7 @@ def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galim
                                                         logger.info("Unable to read existing measurement catalog %s, redoing it"%(outcat))
                                                         logger.info(str(e))
                                                         
-                                ws = _KSBWorkerSettings(img, psffile, sex_cat_name, None,  weight,  outcat, cattype, measkwargs)
+                                ws = _KSBWorkerSettings(img, psffile, sex_cat_name, None,  weight,  outcat, measkwargs)
                                 wslist.append(ws)
 
                         logger.info("Using %i / %i images"%(len(imgs),len(wslist) ) )
@@ -141,7 +141,7 @@ def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galim
                         constcat=fitsio.read(incat, ext=2)
                         nimgs=constcat['nimgs'][0]
                         tru_type=constcat['tru_type'][0]
-                        psffile=constcat['psf_file'][0]
+                        psffile=os.path.join(str(constcat['psf_path'][0]),str(constcat['psf_file'][0]))
 
                         name = os.path.basename(incat).replace("_cat.fits", "")
                         imgdir=os.path.join(simdir,"%s_img"%(name))
@@ -189,16 +189,15 @@ def makeksbworkerlist(simdir, measdir, sexdir, cattype,  measkwargs, ext='_galim
                                         logger.error("You want to measure with weights but there is not segmentation map avaliable")
                                         break
 
-                                ws = _KSBWorkerSettings(imgname, psffile, incat, img_id, weight,  outcat, cattype, measkwargs)
+                                ws = _KSBWorkerSettings(imgname, psffile, incat, img_id, weight,  outcat, measkwargs)
                                 wslist.append(ws)
         return wslist
         
-def ksb(simdir, measdir, measkwargs, sexdir=None,catsdir=None, cattype='tru', ncpu=1, rot_pair=True):
+def ksb(simdir, measdir, measkwargs, sexdir=None,catsdir=None,  ncpu=1, rot_pair=True):
         '''
         simdir: work dir containing folder with _cat.fits and _img/. Each pair (_cat.fits, _img) correspond to a case. img* folder contains all realizations
         measdir: path where galsim_adamom measures will be saved
         seaxdir: directory with sextractor measures (for position and segmentation maps)
-        cattype: type of catalog for initial position for fitting
         use_weight: use segmentation maps as weight function 
         rot_pair: measure the rot_pair images avaliable
         '''
@@ -206,7 +205,7 @@ def ksb(simdir, measdir, measkwargs, sexdir=None,catsdir=None, cattype='tru', nc
         
         if not os.path.exists(measdir):
                 os.makedirs(measdir)
-        wslist=makeksbworkerlist(simdir, measdir, sexdir, cattype, measkwargs, ext='_galimg', catsdir=catsdir)
+        wslist=makeksbworkerlist(simdir, measdir, sexdir, measkwargs, ext='_galimg', catsdir=catsdir)
         '''
         chunksize=1*ncpu
         nchunks=len(wslist)//chunksize
@@ -223,7 +222,7 @@ def ksb(simdir, measdir, measkwargs, sexdir=None,catsdir=None, cattype='tru', nc
         _run(_ksbworker, wslist, ncpu)
         if rot_pair:
                 measkwargs.update({"rot_pair":rot_pair})
-                wslist=makeksbworkerlist(simdir, measdir, sexdir, cattype, measkwargs, ext='_galimg_rot', catsdir=catsdir)     
+                wslist=makeksbworkerlist(simdir, measdir, sexdir, measkwargs, ext='_galimg_rot', catsdir=catsdir)     
                 _run(_ksbworker, wslist, ncpu)
         
 
@@ -231,7 +230,7 @@ class _KSBWorkerSettings():
         """
         #A class that holds together all the settings for measuring an image.
         """
-        def __init__(self, imgname, psffile, cat_img, img_id, weight, filename, cattype, measkwargs):
+        def __init__(self, imgname, psffile, cat_img, img_id, weight, filename, measkwargs):
                 
                 self.imgname = imgname
                 self.psffile = psffile
@@ -239,7 +238,6 @@ class _KSBWorkerSettings():
                 self.img_id = img_id
                 self.weight = weight
                 self.filename = filename
-                self.cattype = cattype
                 self.measkwargs=measkwargs
 
 def _ksbworker(ws):
@@ -254,18 +252,7 @@ def _ksbworker(ws):
         logger.info("%s is starting to measure catalog %s with PID %s" % (p.name, str(ws.cat_img), p.pid))
 
         
-        if ws.cattype=='sex':
-                with fits.open(ws.cat_img) as hdul:
-                        hdul.verify('fix')
-                        catalog_img=hdul[2].data
-                galsim_ksb.measure(ws.imgname, ws.psffile,  catalog_img, xname="X_IMAGE" , yname="Y_IMAGE",  weight=ws.weight, filename=ws.filename, **ws.measkwargs)
-        else:
-                with fits.open(ws.cat_img) as hdul:
-                        hdul.verify('fix')
-                        cat=hdul[1].data
-                catalog_img = cat[cat["img_id"]==ws.img_id]
-
-                galsim_ksb.measure(ws.imgname, ws.psffile,  catalog_img, xname="x", yname="y", weight=ws.weight, filename=ws.filename, **ws.measkwargs)
+        galsim_ksb.measure(ws.imgname,  ws.psffile, ws.cat_img, ws.img_id, weight=ws.weight, filename=ws.filename,  **ws.measkwargs)
 
         endtime = datetime.datetime.now()
         logger.info("%s is done, it took %s" % (p.name, str(endtime - starttime)))

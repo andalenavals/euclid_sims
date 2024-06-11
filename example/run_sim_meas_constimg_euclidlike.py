@@ -394,7 +394,33 @@ def main():
                 SHE_SIMS.tools.utils.makepicklecat(filename, typecat=args.typegroup, picklefilename=filename.replace(".fits",".pkl"))
 
 
+    if args.runksb:        
+        logger.info("Running KSB")
+        measkwargs={"variant":"widersub","skipdone":args.skipdone,
+                    "extra_cols":extracols, "use_weight":args.use_weight,
+                    "substractsky":args.substractsky, "edgewidth":5, "cattype":args.cattype}
+        if args.cattype=='sex':
+            measkwargs.update({"xname":"X_IMAGE", "yname":"Y_IMAGE"})
 
+        SHE_SIMS.meas.run.ksb(simdir,ksbdir,  measkwargs,  sexdir=sexmeasdir, ncpu=args.ncpu,  rot_pair=args.rot_pair)
+        if args.runneis:
+            neicols=["ksb_T", "ksb_flux"]
+            SHE_SIMS.meas.neighbors.measfct(ksbdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )
+
+        if (args.matchinput):
+            truecols=["tru_flux","tru_g", "tru_mag", "obj_id", "x", "y", "tru_g1", "tru_g2"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]
+            #SHE_SIMS.meas.match.measfct(ksbdir,simdir,ext='_meascat.fits', cols=truecols, xname ='adamom_x', yname='adamom_y' )
+            SHE_SIMS.meas.match.measfct(ksbdir,simdir,ext='_galimg_meascat.fits', cols=truecols, xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone )
+            SHE_SIMS.meas.match.measfct(ksbdir,simdir,ext='_galimg_rot_meascat.fits', cols=truecols, xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone,rot_pair=True )
+
+
+        filename=os.path.join(ksbdir, args.groupcats)
+        if args.cattype =='tru': sexellip=False
+        elif args.cattype =='sex': sexellip=True
+        picklecat=True
+        if args.usevarshear: picklecat=False
+        group_measurements(filename, simdir, ksbdir, args.match_pairs, args.rot_pair, cols2d, cols1d, args.typegroup, args.nsubcases, constants=constants, sexellip=sexellip, picklecat=picklecat, stars=args.stars, cattype=args.cattype)
+        
             
     if args.runngmix:        
         logger.info("Running ngmix")
@@ -421,27 +447,7 @@ def main():
         if args.usevarshear: picklecat=False
         group_measurements(filename, simdir, ngmixdir, args.match_pairs, args.rot_pair, cols2d, cols1d, args.typegroup, args.nsubcases, constants=constants, sexellip=sexellip, picklecat=picklecat, stars=args.stars, cattype=args.cattype)
 
-    if args.runksb:        
-        logger.info("Running KSB")
-        measkwargs={"variant":"wider", "skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5}
-        SHE_SIMS.meas.run.ksb(simdir,ksbdir,  measkwargs,  sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  rot_pair=args.rot_pair)
-        if args.runneis:
-            neicols=["ksb_T", "ksb_flux"]
-            SHE_SIMS.meas.neighbors.measfct(ksbdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )
-
-        if (args.matchinput):
-            truecols=["tru_flux","tru_g", "tru_mag", "obj_id", "x", "y", "tru_g1", "tru_g2"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]
-            #SHE_SIMS.meas.match.measfct(ksbdir,simdir,ext='_meascat.fits', cols=truecols, xname ='adamom_x', yname='adamom_y' )
-            SHE_SIMS.meas.match.measfct(ksbdir,simdir,ext='_galimg_meascat.fits', cols=truecols, xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone )
-            SHE_SIMS.meas.match.measfct(ksbdir,simdir,ext='_galimg_rot_meascat.fits', cols=truecols, xname ='X_IMAGE', yname='Y_IMAGE', matchlabel="", ncpu=args.ncpu, skipdone=args.skipdone,rot_pair=True )
-
-
-        filename=os.path.join(ksbdir, args.groupcats)
-        if args.cattype =='tru': sexellip=False
-        elif args.cattype =='sex': sexellip=True
-        picklecat=True
-        if args.usevarshear: picklecat=False
-        group_measurements(filename, simdir, ksbdir, args.match_pairs, args.rot_pair, cols2d, cols1d, args.typegroup, args.nsubcases, constants=constants, sexellip=sexellip, picklecat=picklecat, stars=args.stars, cattype=args.cattype)  
+     
 
 
 if __name__ == "__main__":
