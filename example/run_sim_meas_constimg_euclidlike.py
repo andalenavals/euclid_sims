@@ -43,7 +43,7 @@ def parse_args():
                         default='configfiles/simconstants.yaml',
                         help='yaml containing contant values in sims like ')
     parser.add_argument('--tru_type', default=2, type=int, 
-                        help='Type of galaxy of model for the sims 0 gaussian, 1 sersic, 2bulge and disk')
+                        help='Type of galaxy of model for the sims 0 gaussian, 1 sersic, 2bulge and disk, 3 Real Cosmos, 4 parametric Cosmos')
     parser.add_argument('--ncat', default=2, type=int, 
                         help='Number of catalog to draw')
     parser.add_argument('--usepsfimg', default=False,
@@ -266,9 +266,15 @@ def main():
         df=pd.read_csv(args.skycat)
         sky_vals=df["STRAY"]+df["ZODI"] #e/565s
         sky_vals=sky_vals.to_numpy()
+
+        #nexp=1
+        #levels=(nexp*sky_vals)/3.48
+        #print(np.min(levels), np.max(levels), np.median(levels), np.mean(levels), np.std(levels) )
+        #assert False
     else:
         sky_vals=None
     drawcatkwargs.update({"sky_vals":sky_vals})
+
         
     #DRAW SIMULATION CATS AND IMAGES
     if (args.runsims):
