@@ -99,16 +99,23 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
 
         psfnames=list(psfdata.dtype.names)
         psfformats=[ e[1] for e in psfdata.dtype.descr]
-                
+
+        
         if sky_vals is not None:
                 sky=np.random.choice(sky_vals)/565.0 #the catalog with skyback is in electros for 565 s exposure
                 tru_sky_level=(sky*constants["exptime"])/constants["realgain"]
+                print(tru_sky_level)
+                if scalefield=='sky_level':
+                        tru_sky_level*=scalefactor
                 constants.update({"sky_level":tru_sky_level})
                 constants.update({"skyback":sky})
         else:
                 tru_sky_level= (constants["skyback"]*constants["exptime"])/constants["realgain"]
+                if 'scalefield'=='sky_level':
+                        tru_sky_level*=scalefactor
                 constants.update({"sky_level":tru_sky_level})
-
+   
+                
         #Constants
         names_const =  ['tru_gal_density', 'tru_ngals', 'imagesize', 'nimgs', 'tru_type'] +list(shear_pars.keys())+list(constants.keys())+psfnames
         formats_const = ['f4', 'i4','i4', 'i4', 'i4'] + [type(shear_pars[k]) for k in shear_pars.keys()]+[type(constants[k]) for k in constants.keys()]+psfformats
@@ -238,7 +245,7 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
 
 
        
-def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True, cosmoscatfile=None, cosmosdir=None):
+def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True, cosmoscatfile=None, cosmosdir=None, tru_type=None):
         '''
         constantshear: flag to determine whether or not there is a variable shear in a image
         '''
@@ -312,6 +319,9 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         
         for row in catalog:
                 profile_type=profiles[const_cat["tru_type"][0]]
+                if tru_type is not None:
+                        logger.info("Warning you are changing the profile type to %s"%(profiles[tru_type]))
+                        profile_type=profiles[tru_type]
 
                 if profile_type == "Sersic":
                         if const_cat["snc_type"][0]==0:
@@ -659,11 +669,11 @@ def multi(workdir, drawcatkwargs, drawimgkwargs, ncat=1, ncpu=1, skipdone=False,
 
         
         if rot_pair:
-                drawimgkwargs.update({"rot_pair":True})
+                drawimgkwargs.update({"rot_pair":True, "tru_type":drawcatkwargs["tru_type"]})
                 wslist= makeworkerlist(workdir, catalogs, basename_list, drawimgkwargs, skipdone, ext='_galimg_rot.fits', strongcheck=strongcheck)
                 _run(_worker, wslist, ncpu)
                 
-        drawimgkwargs.update({"rot_pair":False})
+        drawimgkwargs.update({"rot_pair":False, "tru_type":drawcatkwargs["tru_type"]})
         wslist= makeworkerlist(workdir, catalogs, basename_list, drawimgkwargs, skipdone,  ext='_galimg.fits', strongcheck=strongcheck)
         _run(_worker, wslist, ncpu)
 
