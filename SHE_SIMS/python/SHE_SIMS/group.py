@@ -27,6 +27,12 @@ def append_measurements(meascat_dfs, measimg, nimgs,basename, cat_id,ext, label,
             meascat_df=open_fits(meascatpath, hdu=hdu)
         except:
             continue #raise
+
+        if len(meascat_df)==0: 
+            logger.info("Image %s is empty"%(meascatpath))
+            #assert os.path.isfile(meascatpath)
+            #os.remove(meascatpath)
+            continue
             
         if "obj_id" in meascat_df.columns:
             c=cantor_pair(cat_id,img_id)

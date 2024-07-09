@@ -320,7 +320,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         for row in catalog:
                 profile_type=profiles[const_cat["tru_type"][0]]
                 if tru_type is not None:
-                        logger.info("Warning you are changing the profile type to %s"%(profiles[tru_type]))
+                        logger.debug("Warning you are changing the profile type to %s"%(profiles[tru_type]))
                         profile_type=profiles[tru_type]
 
                 if profile_type == "Sersic":
@@ -445,7 +445,11 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
-                        gal = galaxy_catalog.makeGalaxy(index, gal_type='parametric')
+                        try:
+                                gal = galaxy_catalog.makeGalaxy(index, gal_type='parametric')
+                        except:
+                                logger.info("Could not make parametric galaxy!!")
+                                continue
                         tru_theta=float(row["tru_theta"])
                         gal = gal.rotate(tru_theta * galsim.degrees)                        
                 else:
