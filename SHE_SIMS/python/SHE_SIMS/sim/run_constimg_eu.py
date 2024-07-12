@@ -104,7 +104,6 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
         if sky_vals is not None:
                 sky=np.random.choice(sky_vals)/565.0 #the catalog with skyback is in electros for 565 s exposure
                 tru_sky_level=(sky*constants["exptime"])/constants["realgain"]
-                print(tru_sky_level)
                 if scalefield=='sky_level':
                         tru_sky_level*=scalefactor
                 constants.update({"sky_level":tru_sky_level})
@@ -596,8 +595,6 @@ def makeworkerlist(workdir, catalogs, basename_list, drawimgkwargs, skipdone, ex
                 assert os.path.isfile(cat)
                 with fits.open(cat) as hdul:
                         hdul.verify('fix')
-                        print(cat)
-                        print(hdul)
                         constcat=hdul[2].data
                 nimgs=constcat['nimgs'][0]
                 for img_id in range(nimgs):

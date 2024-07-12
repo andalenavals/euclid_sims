@@ -1,8 +1,8 @@
 ## Catalog arguments
 #ngal: 9 #number of galaxies per image
 #nimgs: 2 #number of images
-imagesize: 4000 #nummber of pixel per side
-ntotal_gal: 10000
+imagesize: 400 #nummber of pixel per side
+ntotal_gal: 30
 snc: False #all images correspond to same ngal rotate, if false only the position is conserved
 mode: 'grid' #'random '#'grid'
 tru_type: 2  
