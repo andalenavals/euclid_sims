@@ -138,7 +138,11 @@ def drawinputcat(ncases, path=None, psfsourcecat=None, galscat=None, constants=N
     gal= SHE_SIMS.sim.params_eu_gen.draw_sample(ncases, tru_type=tru_type,  dist_type=dist_type, sourcecat=galscat, constants=constants)
     tru_s1= np.random.uniform(-max_shear, max_shear, ncases)
     tru_s2= np.random.uniform(-max_shear, max_shear, ncases)
-    
+
+    gal.pop("tru_theta")
+    gal.pop("tru_g1")
+    gal.pop("tru_g2")
+ 
     names_const =  [ 'tru_type'] +list(constants.keys())
     values_const=[ tru_type] +[constants[k] for k in constants.keys()]
     formats_const = [ 'i4'] +[type(constants[k]) for k in constants.keys()]
@@ -170,9 +174,11 @@ def drawinputcat(ncases, path=None, psfsourcecat=None, galscat=None, constants=N
     hdulist = fits.HDUList(hdul)
     hdulist.writeto(filename, overwrite=True)
                 
-def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbins=1, filename=None, patience=1, blacklist=None):
+
+#random orientation pairs
+def measure_pairs2(catid, row, constants, profile_type=2, npairs=1, subsample_nbins=1, filename=None, patience=1, blacklist=None):
     '''
-    patience: number of attempts to measure a pair
+    patience: max number of consecutive failures
     '''
     logger.info("\n")
     logger.info("Doing %s"%(filename))
@@ -380,6 +386,220 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
         fitsio.write(filename, outdata, clobber=True)
         logger.info("measurements catalog %s written"%(filename))
                               
+
+def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbins=1, filename=None, patience=1, blacklist=None):
+    '''
+    patience: number of attempts to measure a pair
+    '''
+    logger.info("\n")
+    logger.info("Doing %s"%(filename))
+    vispixelscale=0.1 #arcsec
+    psfpixelscale = 0.02 #arcsec
+    gsparams = galsim.GSParams(maximum_fft_size=100000)
+    rng = galsim.BaseDeviate()
+    ud = galsim.UniformDeviate()
+
+    psffilename=os.path.join(constants["psf_path"][0],row["psf_file"])
+    assert os.path.isfile(psffilename)
+    with fits.open(psffilename) as hdul:
+        psfarray=hdul[1].data
+    psfarray_shape=psfarray.shape
+    psfimg=galsim.Image(psfarray)            
+    psf = galsim.InterpolatedImage( psfimg, flux=1.0, scale=psfpixelscale, gsparams=gsparams )
+
+
+    profiles=["Gaussian", "Sersic", "EBulgeDisk"]
+    profile_type=profiles[constants["tru_type"][0]]
+
+    data=[]
+    counter=0
+    delta_theta=90./npairs
+    thetas_list=[i*delta_theta for i in range(npairs)]
+    while (len(data)< npairs*2)&(counter<patience):
+        tru_theta=thetas_list[0]
+        dataux=[]
+        for rot in [False,True]:
+            if profile_type == "Sersic":
+                tru_rad=float(row["tru_rad"])
+                tru_flux=float(row["tru_flux"])
+                tru_sersicn=float(row["tru_sersicn"])
+                
+                if sersiccut is None:
+                    trunc = 0
+                else:
+                    trunc = float(tru_rad) * sersiccut
+                    gal = galsim.Sersic(n=tru_sersicn, half_light_radius=tru_rad, flux=tru_flux, gsparams=gsparams, trunc=trunc)
+                # We make this profile elliptical
+                gal = gal.shear(g1=row["tru_g1"], g2=row["tru_g2"]) # This adds the ellipticity to the galaxy
+
+            elif profile_type == "Gaussian":
+                tru_sigma=float(row["tru_sigma"])
+                tru_flux=float(row["tru_flux"])
+                
+                gal = galsim.Gaussian(flux=tru_flux, sigma=tru_sigma, gsparams=gsparams)
+                # We make this profile elliptical
+                gal = gal.shear(g1=row["tru_g1"], g2=row["tru_g2"]) # This adds the ellipticity to the galaxy
+        
+            elif profile_type == "EBulgeDisk":
+                bulge_axis_ratio=float(row['bulge_axis_ratio'])
+                tru_bulge_g=float(row["bulge_ellipticity"])
+                tru_bulge_flux=float(row["tru_bulge_flux"])
+                tru_bulge_sersicn=float(row["bulge_nsersic"])
+                tru_bulge_rad=float(row["bulge_r50"])
+                tru_disk_rad=float(row["disk_r50"])
+                tru_disk_flux=float(row["tru_disk_flux"])
+                tru_disk_inclination=float(row["inclination_angle"])
+                tru_disk_scaleheight=float(row["disk_scalelength"])
+                #tru_disk_scale_h_over_r=float(row["tru_disk_scale_h_over_r"])
+                dominant_shape=int(row["dominant_shape"])                         
+                #tru_theta=float(row["tru_theta"])
+
+                bulge = galsim.Sersic(n=tru_bulge_sersicn, half_light_radius=tru_bulge_rad, flux=tru_bulge_flux, gsparams = gsparams)
+                
+                if False:
+                    bulge_ell = galsim.Shear(g=tru_bulge_g, beta=tru_theta * galsim.degrees)
+                    bulge = bulge.shear(bulge_ell)
+                    gal=bulge
+                        
+                    if dominant_shape==1:
+                        disk = galsim.InclinedExponential(inclination=tru_disk_inclination*galsim.degrees, 
+                                                          half_light_radius=tru_disk_rad,
+                                                          flux=tru_disk_flux, 
+                                                          scale_height=tru_disk_scaleheight,
+                                                          gsparams = gsparams)
+                        disk = disk.rotate(tru_theta* galsim.degrees)                
+                        gal += disk
+
+                else:
+                    bulge_ell = galsim.Shear(q=bulge_axis_ratio, beta=0 * galsim.degrees)
+                    bulge = bulge.shear(bulge_ell)
+                    gal=bulge
+                    C_DISK=0.1
+                        
+                    if dominant_shape==1:
+                        incrad = np.radians(tru_disk_inclination)
+                        ba = np.sqrt(np.cos(incrad)**2 + (C_DISK * np.sin(incrad))**2)
+                        disk = galsim.InclinedExponential(inclination=tru_disk_inclination* galsim.degrees , 
+                                                          half_light_radius=tru_disk_rad/np.sqrt(ba),
+                                                          scale_h_over_r = C_DISK,
+                                                          flux=tru_disk_flux, 
+                                                          gsparams = gsparams)
+                        gal += disk
+            else:
+                raise RuntimeError("Unknown galaxy profile!")
+
+            theta=tru_theta
+            gal = gal.rotate(theta * galsim.degrees)
+            if rot:
+                gal = gal.rotate(90. * galsim.degrees)
+                theta+=90.
+            '''
+            try:
+                galtest=gal.withFlux(1.0)
+                finestamp=galtest.drawImage(scale=psfpixelscale)
+            except:
+                counter+=1
+                raise RuntimeError("Could not draw the input galaxy")
+                break
+                
+            try: # First we try defaults:
+                inputres = galsim.hsm.FindAdaptiveMom(finestamp, weight=None)
+            except: # We change a bit the settings:
+                try:
+                    logger.debug("HSM defaults failed, retrying with larger sigma...")
+                    hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
+                    inputres = galsim.hsm.FindAdaptiveMom(finestamp, guess_sig=15.0, hsmparams=hsmparams, weight=None)
+                except:
+                    counter+=1
+                    raise RuntimeError("Could not measure the input galaxy")
+                    break               
+            tru_ada_sigma=inputres.moments_sigma
+            '''
+            
+            '''
+            try:
+                tru_ada_sigma=gal.withFlux(1.0).calculateHLR()
+            except:
+                print(gal)
+                couter+=patience
+                break
+                raise RuntimeError("Could not get the HLR from input galaxy")
+            '''
+            
+            tru_ada_sigma=-1
+        
+            gal = gal.lens(float(row["tru_s1"]), float(row["tru_s2"]), 1.0)
+            xjitter = vispixelscale*(ud() - 0.5)
+            yjitter = vispixelscale*(ud() - 0.5)
+            gal = gal.shift(xjitter,yjitter)
+            galconv = galsim.Convolve([gal,psf])
+            stamp = galconv.drawImage( scale=vispixelscale)
+
+            stamp+=float(row["sky_level"])
+            stamp.addNoise(galsim.CCDNoise(rng, sky_level=0.0,
+                                           gain=float(constants["realgain"][0]),
+                                           read_noise=float(constants["ron"][0])))
+
+            edgewidth=5
+            sky = SHE_SIMS.meas.utils.skystats(stamp, edgewidth)
+            stamp-=sky["med"]
+
+            if subsample_nbins>1:
+                stamp=stamp.subsample(subsample_nbins,subsample_nbins)
+            
+            try:
+                try: # First we try defaults:
+                    res = galsim.hsm.FindAdaptiveMom(stamp, weight=None, guess_sigma=5.0*subsample_nbins)
+                except: # We change a bit the settings:
+                    logger.debug("HSM defaults failed, retrying with larger sigma...")
+                    hsmparams = galsim.hsm.HSMParams(max_mom2_iter=1000)
+                    res = galsim.hsm.FindAdaptiveMom(stamp, guess_sig=15.0*subsample_nbins, hsmparams=hsmparams, weight=None)                        
+            
+            except: # If this also fails, we give up:
+                logger.debug("Even the retry failed on:\n", exc_info = True)
+                counter+=1
+                break
+    
+            ada_flux = res.moments_amp
+            ada_x = res.moments_centroid.x
+            ada_y = res.moments_centroid.y 
+            ada_g1 = res.observed_shape.g1
+            ada_g2 = res.observed_shape.g2
+            ada_sigma = res.moments_sigma
+            ada_rho4 = res.moments_rho4
+            centroid_shift=np.hypot(ada_x-stamp.true_center.x, ada_y-stamp.true_center.y)
+            if centroid_shift>4:
+                counter+=1
+                break
+                #continue
+            skymad=sky["mad"]
+            aper=3
+            snr=(ada_flux*constants["realgain"][0])/(np.sqrt(ada_flux*constants["realgain"][0] + (np.pi*(ada_sigma*aper*1.1774*(1./subsample_nbins))**2) * (skymad*constants["realgain"][0])**2))
+            features=[ada_flux, ada_sigma, ada_rho4, ada_g1,ada_g2, ada_x, ada_y,centroid_shift, skymad,snr, tru_ada_sigma, theta]
+            #print(features, row["tru_mag"], row["bulge_r50"])
+            dataux.append(features)
+            if len(dataux)==2:
+                data.append(dataux[0])
+                data.append(dataux[1])
+                counter=0
+                thetas_list.pop(0)
+
+    if (counter>=patience):
+        logger.info("Patience exceeded skiping this catalog")
+        write_to_file(str(catid), blacklist)
+        return
+ 
+    names =  [ "adamom_%s"%(n) for n in  [ "flux", "sigma","rho4", "g1", "g2","x", "y"] ]+["centroid_shift", "skymad", "snr", "tru_adamom_sigma", "tru_theta"]
+    formats =['f4']*len(names)
+    dtype = dict(names = names, formats=formats)
+    outdata = np.recarray( (len(data), ), dtype=dtype)
+    for i, key in enumerate(names):
+        outdata[key] = (np.array(data).T)[i]                 
+
+    if filename is not None:
+        fitsio.write(filename, outdata, clobber=True)
+        logger.info("measurements catalog %s written"%(filename))
+  
 def simmeas(inputcat, measdir=None, skipdone=True, ncpu=1, measkwargs=None, blacklist=None):
     cat=open_fits(inputcat,hdu=1)
     constants=open_fits(inputcat,hdu=2)

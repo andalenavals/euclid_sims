@@ -239,6 +239,10 @@ def main():
     if args.loglevel=='WARNING':
         print("Using WARNING logging")
         level = logging.WARNING
+    if args.loglevel=='NULL':
+        print("All logging was disabled")
+        level = logging.CRITICAL+1
+        #logging.disable(logging.CRITICAL)
     
 
     loggerformat='PID %(process)06d | %(asctime)s | %(levelname)s: %(name)s(%(funcName)s): %(message)s'
@@ -358,6 +362,7 @@ def main():
         #measkwargs={"variant":"wider","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5, "subsample_nbins":args.subsample_nbins }
         measkwargs={"variant":"widersub2","skipdone":args.skipdone, "extra_cols":extracols, "use_weight":args.use_weight, "substractsky":args.substractsky, "edgewidth":5, "subsample_nbins":args.subsample_nbins }
         if args.cattype=="tru": measkwargs.update({"stars":args.stars})
+        print("used measkwargs")
         print(measkwargs)
 
         SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
