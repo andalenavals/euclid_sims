@@ -6,10 +6,13 @@ ngal_min: 1706 #1/3
 ngal_max: 15351 #3x
 ngal_nbins: 8
 #nimgs: 3 #number of images
-
-nstar: 10 #10000
-# Use this if you want the same number of objects per case
 ntotal_gal: 100000 # you can not use nimgs if this is defined
+
+nstar: #10 #10000
+nstar_min: 89 #1/3
+nstar_max: 800 #3x #133
+nstar_nbins: 8
+
 
 
 imagesize: 4000 #nummber of pixel per side

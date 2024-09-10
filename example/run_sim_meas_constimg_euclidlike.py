@@ -129,6 +129,9 @@ def parse_args():
     parser.add_argument('--adamompsfcatalog',
                         default='/vol/euclid2/euclid2_raid2/aanavarroa/catalogs/MomentsML/fullimages_constimg_euclid/all_adamom_Lance_Jan_2020.fits',
                         help='diractory of work')
+    parser.add_argument('--starsourcecat',
+                        default='/vol/euclidraid4/data/aanavarroa/catalogs/gaia/stars.fits',
+                        help='diractory of work')
     parser.add_argument('--cosmoscatfile',
                         default=None,
                         help='Cosmos catalog file parametric')
@@ -282,7 +285,7 @@ def main():
         
     #DRAW SIMULATION CATS AND IMAGES
     if (args.runsims):
-        extra_caseargs={'dist_type':args.dist_type, 'psfsourcecat':args.adamompsfcatalog, 'tru_type':args.tru_type, "max_shear": args.max_shear, 'constants':constants, 'usevarpsf':args.usevarpsf, 'scalefield':args.scalefield, 'scalefactor':args.scalefactor}
+        extra_caseargs={'dist_type':args.dist_type, 'psfsourcecat':args.adamompsfcatalog, 'starsourcecat':args.starsourcecat, 'tru_type':args.tru_type, "max_shear": args.max_shear, 'constants':constants, 'usevarpsf':args.usevarpsf, 'scalefield':args.scalefield, 'scalefactor':args.scalefactor}
     
         if (args.dist_type=='flagship')|(args.dist_type=='uniflagship'):
             original_sourceflagshipcat = args.flagshippath # to read
@@ -365,7 +368,7 @@ def main():
         print("used measkwargs")
         print(measkwargs)
 
-        SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
+        #SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
         if args.runneis:
             neicols=["adamom_sigma", "adamom_flux"]
             SHE_SIMS.meas.neighbors.measfct(adamomdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )

@@ -98,7 +98,8 @@ def _starworker(ws):
         
         for f in ["x","y","tru_flux", "tru_mag"]:
                 if f not in ws.dcat.columns: continue
-                ws.dcat.loc[useflag, f]=cataux[f].to_numpy()[indin][useflag]
+                target_dtype=ws.dcat[f].dtype
+                ws.dcat.loc[useflag, f]=cataux[f].to_numpy()[indin][useflag].astype(target_dtype)
 
         catbintable = fits.BinTableHDU(ws.dcat.to_records(index=False))
         with fits.open(ws.detectcatname) as hdul:
