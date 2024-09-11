@@ -433,9 +433,13 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
+                        sersic_values = galaxy_catalog.getValue('sersicfit', index)
+                        sersic_pa_rad = float(sersic_values[7])
+                        sersic_pa = sersic_pa_rad * (180 / np.pi)
                         gal = galaxy_catalog.makeGalaxy(index, gal_type='real')
-                        tru_theta=float(row["tru_theta"])
-                        gal = gal.rotate(tru_theta* galsim.degrees)                        
+                        tru_theta = float(row["tru_theta"])
+                        rot_angle = tru_theta - sersic_pa
+                        gal = gal.rotate(rot_angle * galsim.degrees)                        
                                         
                 elif profile_type == "CosmosParam":
                         cosmospath=os.path.join(cosmosdir, cosmoscatfile)
@@ -447,13 +451,17 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
+                        sersic_values = galaxy_catalog.getValue('sersicfit', index)
+                        sersic_pa_rad = float(sersic_values[7])
+                        sersic_pa = sersic_pa_rad * (180 / np.pi)
                         try:
                                 gal = galaxy_catalog.makeGalaxy(index, gal_type='parametric')
                         except:
                                 logger.info("Could not make parametric galaxy!!")
                                 continue
                         tru_theta=float(row["tru_theta"])
-                        gal = gal.rotate(tru_theta * galsim.degrees)                        
+                        rot_angle = tru_theta - sersic_pa
+                        gal = gal.rotate(rot_angle * galsim.degrees)                        
                 else:
                                                 
                         raise RuntimeError("Unknown galaxy profile!")
