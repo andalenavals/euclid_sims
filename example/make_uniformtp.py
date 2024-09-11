@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 import galsim
 import datetime
 import copy
+import photutils
+from photutils.aperture import CircularAperture, EllipticalAperture, aperture_photometry, ApertureStats
+from photutils.isophote import EllipseGeometry, Ellipse
+from astropy.modeling import models, fitting
+import scipy
 
 RAY=False
 if RAY:
@@ -101,6 +106,36 @@ def parse_args():
     
     args = parser.parse_args()
     return args
+
+
+
+def calculate_concentration_index(image_data):
+    # Calculate the total flux
+    image_data = np.clip(image_data, a_min=0, a_max=None)
+    
+    total_flux = np.sum(image_data)
+
+    # Calculate the center of mass of the image
+    y_center, x_center = scipy.ndimage.center_of_mass(image_data)
+
+    # Create a meshgrid for the image
+    y, x = np.indices(image_data.shape)
+
+    # Calculate the radial distance from the center
+    radii = np.sqrt((x - x_center) ** 2 + (y - y_center) ** 2)
+
+    # Calculate the radial profile
+    radial_profile, bin_edges = np.histogram(radii.ravel(), bins=50, weights=image_data.ravel())
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    # Calculate cumulative flux
+    cumulative_flux = np.cumsum(radial_profile)
+    
+    # Find r_20 and r_80
+    r_20 = bin_centers[np.searchsorted(cumulative_flux, 0.2 * total_flux)]
+    r_80 = bin_centers[np.searchsorted(cumulative_flux, 0.8 * total_flux)]
+    
+    return r_20, r_80
 
 
 def drawinputcat(ncases, path=None, psfsourcecat=None, galscat=None, constants=None,  usevarpsf=True, usevarsky=True, skycat=None, tru_type=2, dist_type="uniflagship", max_shear=0.05 ):
@@ -525,6 +560,7 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
                 break
                 raise RuntimeError("Could not get the HLR from input galaxy")
             '''
+            stampsize=64
             
             tru_ada_sigma=-1
         
@@ -533,13 +569,15 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             yjitter = vispixelscale*(ud() - 0.5)
             gal = gal.shift(xjitter,yjitter)
             galconv = galsim.Convolve([gal,psf])
-            stamp = galconv.drawImage( scale=vispixelscale)
+            
+            stamp = galconv.drawImage( scale=vispixelscale, nx=stampsize, ny=stampsize)
 
             stamp+=float(row["sky_level"])
             stamp.addNoise(galsim.CCDNoise(rng, sky_level=0.0,
                                            gain=float(constants["realgain"][0]),
                                            read_noise=float(constants["ron"][0])))
-
+                        
+        
             edgewidth=5
             sky = SHE_SIMS.meas.utils.skystats(stamp, edgewidth)
             stamp-=sky["med"]
@@ -568,6 +606,128 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             ada_sigma = res.moments_sigma
             ada_rho4 = res.moments_rho4
             centroid_shift=np.hypot(ada_x-stamp.true_center.x, ada_y-stamp.true_center.y)
+
+            #print(res)
+            positions=[(ada_x,ada_y)]
+            radii = [5,10,15,20,25,30]
+      
+            error=photutils.utils.calc_total_error(stamp.array, sky["std"], float(constants["realgain"][0]))
+            aper_data=[]
+            aper_names=[]
+            for r in radii:
+                aperstats = ApertureStats(stamp.array, CircularAperture(positions, r=r*subsample_nbins), error=error)
+                flux=aperstats.sum[0]
+                flux_err=aperstats.sum_err[0]
+                mad_std=aperstats.mad_std[0]
+                cxx=aperstats.cxx
+                cxy=aperstats.cxy
+                cyy=aperstats.cyy
+                elongation=aperstats.elongation
+                gini=aperstats.gini[0]
+                fwhm=aperstats.fwhm[0].value
+                max=aperstats.max[0]
+                std=aperstats.std[0]
+                pars=[flux, flux_err, mad_std, cxx[0].value, cxy[0].value, cyy[0].value, elongation[0].value, gini, fwhm, max, std]
+                aper_data+=pars
+                aper_names+=['%s_r%i'%(st,r) for st in ['flux', 'flux_err', 'mad', 'cxx', 'cxy', 'cyy', 'elongation', 'gini','fwhm', 'max', 'std']]
+
+                
+            '''
+            rad20, rad80= calculate_concentration_index(stamp.array)
+            aper_data+= [rad20, rad80]
+            aper_names+=['rad20', 'rad80']
+
+            cutout_data = stamp.array
+            print(cutout_data)
+            #cutout_data = np.nan_to_num(cutout_data, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # Create a meshgrid for the Sersic model
+            y, x = np.indices(cutout_data.shape)
+
+            # Initial guess for Sersic parameters
+            initial_amplitude = np.max(cutout_data)
+            initial_r_eff = ada_sigma  # Half-light radius in pixels
+            initial_n = 4  # Initial guess for Sersic index
+            initial_x0 = cutout_data.shape[0] / 2
+            initial_y0 = cutout_data.shape[1]  / 2
+            initial_ellip = np.hypot(ada_g1,ada_g2)  # Assuming circular for simplicity
+            theta=np.arctan2(ada_g2, ada_g1)
+            
+            # Create the Sersic model
+            sersic_model = models.Sersic2D(amplitude=initial_amplitude, r_eff=initial_r_eff, n=initial_n,
+                                           x_0=initial_x0, y_0=initial_y0, ellip=initial_ellip,theta=theta)
+            sersic_model.amplitude.bounds = (0, None)
+            sersic_model.r_eff.bounds = (0, None)
+            sersic_model.n.bounds = (0, 10)  # Example bounds for Sersic index
+            sersic_model.ellip.bounds = (0, 1)  # Ellipticity must be between 0 and 1
+            sersic_model.theta.bounds = (-np.pi, np.pi)  # Theta must be within -? to ?
+            print(sersic_model)
+
+            # Fit the Sersic model to the cutout data
+            #fitter = fitting.LevMarLSQFitter()
+            fitter = fitting.TRFLSQFitter()
+            #fitter = fitting.LMLSQFitter()
+            fitted_sersic = fitter(sersic_model, x, y, cutout_data, maxiter=1000, filter_non_finite=True)
+            print(fitted_sersic)
+            '''
+
+
+
+            
+            
+            # Define the parameters for the elliptical aperture
+            #a = ada_sigma  # Semi-major axis in pixels
+            #b = ada_sigma    # Semi-minor axis in pixels
+            #theta = 0.5*np.arctan2(ada_g2,ada_g1)  # Position angle in degrees
+            # Create an elliptical aperture
+            #aperture = EllipticalAperture(positions[0], a, b, theta=np.deg2rad(theta))
+            #phot_table = aperture_photometry(stamp.array, aperture)
+            #geometry = EllipseGeometry(x0=0.5*stamp.array.shape[0], y0=0.5*stamp.array.shape[1], sma=40, eps=0.5, pa=theta, astep=1.0)
+            
+            #ellipse = Ellipse(stamp.array, geometry)
+            #ellipse.fit_image()
+
+            '''
+            cutout_data=stamp.array
+            y, x = np.indices(cutout_data.shape)
+
+            # Initial guess for the elliptical parameters
+            initial_amplitude = np.max(cutout_data)
+            initial_a = 10  # Semi-major axis in pixels
+            initial_b = 5   # Semi-minor axis in pixels
+            initial_x0 = cutout_data.shape[0] / 2
+            initial_y0 = cutout_data.shape[1] / 2
+            initial_theta = 0  # Position angle in radians
+            
+            # Create the Ellipse2D model
+            ellipse_model = models.Ellipse2D(amplitude=initial_amplitude, x_0=initial_x0, 
+                                             y_0=initial_y0, a=initial_a, b=initial_b, 
+                                             theta=initial_theta)
+
+            # Fit the elliptical model to the cutout data
+            fitter = fitting.LevMarLSQFitter()
+            fitted_ellipse = fitter(ellipse_model, x, y, cutout_data)
+            print(fitted_ellipse)
+            a,b=fitted_ellipse.a,fitted_ellipse.b
+            print(a,b)
+            print(np.hypot(ada_g1,ada_g2), (a-b)/(a+b))
+
+            xx, yy = np.meshgrid(np.arange(cutout_data.shape[1]), np.arange(cutout_data.shape[0]))
+
+            # Evaluate the fitted elliptical model
+            fitted_data = fitted_ellipse(xx, yy)
+            
+            # Calculate the total flux by summing the fitted model values
+            total_flux = np.sum(fitted_data)
+
+            print(total_flux)
+            '''
+
+           
+            #assert False
+
+
+            
             if centroid_shift>4:
                 counter+=1
                 break
@@ -576,6 +736,7 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             aper=3
             snr=(ada_flux*constants["realgain"][0])/(np.sqrt(ada_flux*constants["realgain"][0] + (np.pi*(ada_sigma*aper*1.1774*(1./subsample_nbins))**2) * (skymad*constants["realgain"][0])**2))
             features=[ada_flux, ada_sigma, ada_rho4, ada_g1,ada_g2, ada_x, ada_y,centroid_shift, skymad,snr, tru_ada_sigma, theta]
+            features+=aper_data
             #print(features, row["tru_mag"], row["bulge_r50"])
             dataux.append(features)
             if len(dataux)==2:
@@ -590,6 +751,7 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
         return
  
     names =  [ "adamom_%s"%(n) for n in  [ "flux", "sigma","rho4", "g1", "g2","x", "y"] ]+["centroid_shift", "skymad", "snr", "tru_adamom_sigma", "tru_theta"]
+    names += aper_names
     formats =['f4']*len(names)
     dtype = dict(names = names, formats=formats)
     outdata = np.recarray( (len(data), ), dtype=dtype)

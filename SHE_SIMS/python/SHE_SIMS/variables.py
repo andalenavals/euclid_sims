@@ -16,7 +16,7 @@ neicols_tru=["tru_r_n1", "tru_r_n2"]+["tru_flux_n1","tru_rad_n1", "tru_mag_n1"]+
 neicols_sex=["SEX_R_n1", "SEX_R_n2", "SNR_WIN_n1", "SNR_WIN_n2", "MAG_AUTO_n1", "MAG_AUTO_n2"]
 neicols_ada=["adamom_r_n1", "adamom_flux_n1", "adamom_sigma_n1"]+["adamom_r_n2", "adamom_flux_n2", "adamom_sigma_n2"]
 
-COLS1D=["tru_s1", "tru_s2", "tru_gal_density", "tru_sky_level", "sky_level"]
+COLS1D=["tru_s1", "tru_s2", "tru_gal_density", "tru_sky_level", "sky_level", "tru_nstars"]
 COLS2D=['tru_g1', "tru_g2", "x", "y", "tru_theta"]+["tru_bulge_g1", "tru_bulge_g2"]
 
 

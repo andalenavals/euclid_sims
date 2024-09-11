@@ -67,6 +67,7 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
         if nstar is None:
                 nstar = params_eu_gen.draw_ngal(nmin=nstar_min, nmax=nstar_max, nbins=nstar_nbins)
                 logger.info("Star density density %i"%(nstar))
+                constants["tru_nstars"]=nstar
 
         if (nimgs is not None)&(ntotal_gal is not None):
                 logger.info("Provide either nimgs or ntotal_gal not both")
@@ -150,7 +151,9 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
                 gal=params_eu_gen.draw_sample(nreas,tru_type=tru_type,
                                           dist_type=dist_type, sourcecat=sourcecat,
                                           constants=constants, scalefactor=scalefactor, scalefield=scalefield)
-                if (nstar>0): star= params_eu_gen.draw_sample_star(nreas_star, sourcecat=sourcecat, constants=constants )
+                if (nstar>0):
+                        assert os.path.isfile(starsourcecat)
+                        star= params_eu_gen.draw_sample_star(nreas_star, sourcecat=starsourcecat, constants=constants )
         
                 if nstar==ngal:
                         star["tru_flux"]=gal["tru_flux"]
@@ -529,7 +532,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
         if starcatalog is not None:
                 logger.debug("Including STARS in sims")
-                
+                stampsize=1024
                 for row in starcatalog:
                         #psf = galsim.InterpolatedImage( psfimg, flux=row["star_flux"], scale=psfpixelscale, gsparams=gsparams )
                         #psf.image.setOrigin(0,0)
@@ -546,7 +549,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         dy = y_nominal - iy_nominal
                         offset = galsim.PositionD(dx,dy)
 
-                        stamp = psf.drawImage(offset=offset, scale=vispixelscale)
+                        stamp = psf.drawImage(nx=stampsize, ny=stampsize, offset=offset, scale=vispixelscale)
                         stamp.setCenter(ix_nominal,iy_nominal)
                         bounds = stamp.bounds & gal_image.bounds
                         if not bounds.isDefined():
