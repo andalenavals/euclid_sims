@@ -19,7 +19,7 @@ CONSTANTS=$SCRIPTDIR/configfiles/simconstants.yaml
 
 cd $SCRIPTDIR
 
-python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR  --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --substractsky --subsample_nbins=2 --dist_type=flagship --cattype=sex --ncpu=20 --ncat=2000 --typegroup=tw --skipdone --runadamom --rot_pair --use_weight #--matchinput --add_ics #--nsubcases=2 --subsample_nbins=2 #--rot_pair #--match_pairs --matchinput --use_weight #--add_ics --matchinput --match_pairs #--rot_pair --use_weight #--runsex --run_check --substractsky --runsims --usepsfimg --usevarsky --usevarpsf 
+python run_sim_meas_constimg_euclidlike.py --loglevel=INFO --simdir=$SIMDIR --sexdir=$SEXDIR --adamomdir=$ADAMOMDIR  --ksbdir=$KSBDIR --adamompsfcatalog=$ADAMOMPSFCAT --groupcats=$GROUPCATS --cat_args=$CAT_ARGS --sex_args=$SEX_ARGS --constants=$CONSTANTS --tru_type=2 --pixel_conv --substractsky --subsample_nbins=2 --dist_type=flagship --cattype=sex --ncpu=20 --ncat=2000 --typegroup=tw --skipdone --runadamom #--rot_pair --use_weight #--matchinput --add_ics #--nsubcases=2 --subsample_nbins=2 #--rot_pair #--match_pairs --matchinput --use_weight #--add_ics --matchinput --match_pairs #--rot_pair --use_weight #--runsex --run_check --substractsky --runsims --usepsfimg --usevarsky --usevarpsf 
 
 
 

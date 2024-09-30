@@ -317,14 +317,28 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 logger.info("Using Gaussian PSF")
                 psf = galsim.Gaussian(flux=1., sigma=3.55*psfpixelscale)
                 psf = psf.shear(g1=-0.0374, g2=9.414e-06 )
+                
 
-        
+        profile_type=profiles[const_cat["tru_type"][0]]
+        if tru_type is not None:
+                logger.debug("Warning you are changing the profile type to %s"%(profiles[tru_type]))
+                profile_type=profiles[tru_type]
+                        
+        if profile_type == "CosmosReal":
+                cosmospath=os.path.join(cosmosdir, cosmoscatfile)
+                galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', exptime=float(const_cat["exptime"][0]), area=9926)
+        elif profile_type == "CosmosParam":
+                cosmospath=os.path.join(cosmosdir, cosmoscatfile)
+                galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none',use_real='False', exptime=float(const_cat["exptime"][0]), area=9926)
+
+        #print(galaxy_catalog)
+        #print(dir(galaxy_catalog))
+        #print(type(galaxy_catalog))
+        #print(galaxy_catalog.param_cat.dtype)
+      
+
+                
         for row in catalog:
-                profile_type=profiles[const_cat["tru_type"][0]]
-                if tru_type is not None:
-                        logger.debug("Warning you are changing the profile type to %s"%(profiles[tru_type]))
-                        profile_type=profiles[tru_type]
-
                 if profile_type == "Sersic":
                         if const_cat["snc_type"][0]==0:
                                 tru_rad=float(row["tru_rad"])
@@ -419,8 +433,6 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 gal = gal.rotate(tru_theta* galsim.degrees)
                 
                 elif profile_type == "CosmosReal":
-                        cosmospath=os.path.join(cosmosdir, cosmoscatfile)
-                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', exptime=float(const_cat["exptime"][0]), area=9926) 
                         '''
                         exclusion_level='none' includes all images, no internal selection done by COSMOSCatalog.
                         Leaving out this parameter results in ~81k galaxies used instead of all 87k.
@@ -442,8 +454,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         gal = gal.rotate(rot_angle * galsim.degrees)                        
                                         
                 elif profile_type == "CosmosParam":
-                        cosmospath=os.path.join(cosmosdir, cosmoscatfile)
-                        galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none',use_real='False', exptime=float(const_cat["exptime"][0]), area=9926)  
+                        
                         '''
                         use_real=False prevents drawing images of real galaxies. Not necessary but used for optimization purposes.
                         '''
@@ -455,13 +466,23 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         sersic_pa_rad = float(sersic_values[7])
                         sersic_pa = sersic_pa_rad * (180 / np.pi)
                         try:
+                                """
+                                if any([ val >1.5 for val in galaxy_catalog.getValue('hlr', index)[1:]]):
+                                        logger.debug("Warning extremely large galaxy founded %i!!"%(index))
+                                        continue
+                                if galaxy_catalog.getValue('mag_auto', index) < 19:
+                                        logger.debug("Warning extremely bright galaxy %i!!"%(index))
+                                        continue
+                                """
                                 gal = galaxy_catalog.makeGalaxy(index, gal_type='parametric')
-                        except:
+                                
+                        except Exception as e:
+                                print(f"An error occurred:{e}")
                                 logger.info("Could not make parametric galaxy!!")
                                 continue
                         tru_theta=float(row["tru_theta"])
                         rot_angle = tru_theta - sersic_pa
-                        gal = gal.rotate(rot_angle * galsim.degrees)                        
+                        gal = gal.rotate(rot_angle * galsim.degrees)
                 else:
                                                 
                         raise RuntimeError("Unknown galaxy profile!")
@@ -489,24 +510,32 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 else:
                         galconv = galsim.Convolve([gal,psf])
 
-                # Taken from Galsim's demo11:
-                x_nominal = row["x"] + 0.5
-                y_nominal = row["y"] + 0.5
-                ix_nominal = int(np.floor(x_nominal+0.5))
-                iy_nominal = int(np.floor(y_nominal+0.5))
-                dx = x_nominal - ix_nominal
-                dy = y_nominal - iy_nominal
-                offset = galsim.PositionD(dx,dy)
+                try:
+                        # Taken from Galsim's demo11:
+                        x_nominal = row["x"] + 0.5
+                        y_nominal = row["y"] + 0.5
+                        ix_nominal = int(np.floor(x_nominal+0.5))
+                        iy_nominal = int(np.floor(y_nominal+0.5))
+                        dx = x_nominal - ix_nominal
+                        dy = y_nominal - iy_nominal
+                        offset = galsim.PositionD(dx,dy)
+
+               
+                        if pixel_conv:
+                                stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
+                        else:
+                                # This sould be used for psf image (interpolated) that already include the pixel response
+                                # if method auto were used extra convolution will be included
+                                stamp = galconv.drawImage(offset=offset, method="no_pixel", scale=psfpixelscale)
+                                nbins=int(vispixelscale/psfpixelscale)
+                                #logger.info("rebinning stamp using %ix%i grid"%(nbins,nbins))
+                                stamp= stamp.bin(nbins,nbins)
                 
-                if pixel_conv:
-                        stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
-                else:
-                        # This sould be used for psf image (interpolated) that already include the pixel response
-                        # if method auto were used extra convolution will be included
-                        stamp = galconv.drawImage(offset=offset, method="no_pixel", scale=psfpixelscale)
-                        nbins=int(vispixelscale/psfpixelscale)
-                        #logger.info("rebinning stamp using %ix%i grid"%(nbins,nbins))
-                        stamp= stamp.bin(nbins,nbins)
+                except Exception as e:
+                        print(f"An error occurred:{e}")
+                        logger.info("Could not draw the image")
+                        continue
+
                         
                 stamp.setCenter(ix_nominal,iy_nominal)
                 
