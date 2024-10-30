@@ -623,6 +623,8 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                            sky_level=0.0,
                                            gain=float(const_cat["realgain"][0]),
                                            read_noise=float(const_cat["ron"][0])))
+
+        # correct noise
                 
         logger.info("Done with drawing, now writing output FITS files ...")        
 
