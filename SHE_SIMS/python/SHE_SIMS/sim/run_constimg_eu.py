@@ -618,7 +618,10 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         
                 
         # And add noise to the convolved galaxy:
-        gal_image+=float(const_cat["sky_level"][0])
+        if not profile_type == "CosmosReal":
+        	gal_image+=float(const_cat["sky_level"][0])
+        else:
+        	gal_image+=(float(const_cat["sky_level"][0])*0.9948 - 3.3759)
         gal_image.addNoise(galsim.CCDNoise(rng,
                                            sky_level=0.0,
                                            gain=float(const_cat["realgain"][0]),
