@@ -628,7 +628,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 
         # And add noise to the convolved galaxy:
         if profile_type == "CosmosReal":
-        	# Correction: 
+            # Correction: 
             # Step 1: Measure mean skymad on COSMOS Real branch with no added skylevel or CCD noise. Measured skymad = 1.2325080832761701
             # Step 2: Square this value, then multiply by the realgain. Squared mean skymad = 1.5190761753410986
             # Step 3: Subtract final value from skylevel before applying to image.
@@ -645,7 +645,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                                sky_level=0.0,
                                                gain=float(const_cat["realgain"][0]),
                                                read_noise=float(const_cat["ron"][0])))
-                     
+        
         logger.info("Done with drawing, now writing output FITS files ...")        
 
         gal_image.write(filename)
