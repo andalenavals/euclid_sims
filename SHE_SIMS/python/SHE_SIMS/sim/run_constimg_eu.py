@@ -330,6 +330,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         elif profile_type == "CosmosParam":
                 cosmospath=os.path.join(cosmosdir, cosmoscatfile)
                 galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', use_real='False', exptime=float(const_cat["exptime"][0]), area=9926)
+        
         #print(galaxy_catalog)
         #print(dir(galaxy_catalog))
         #print(type(galaxy_catalog))
@@ -632,8 +633,8 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         # And add noise to the convolved galaxy:
         if profile_type == "CosmosReal":
         	# Correction: 
-            # Step 1: Measure mean skymad on COSMOS Real branch with no added skylevel or CCD noise. Measured skylevel = 1.5190761753410986
-            # Step 2: Multiply value by the realgain.
+            # Step 1: Measure mean skymad on COSMOS Real branch with no added skylevel or CCD noise. Measured skymad = 1.2325080832761701
+            # Step 2: Square this value, then multiply by the realgain. Squared mean skymad = 1.5190761753410986
             # Step 3: Subtract final value from skylevel before applying to image.
             # Adjusted skylevel = skylevel - 1.5190761753410986 * realgain
             gal_image+=(float(const_cat["sky_level"][0]) - 1.5190761753410986*float(const_cat["realgain"][0]))
@@ -644,12 +645,11 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
         else:
         	gal_image+=float(const_cat["sky_level"][0])
-        	gal_image.addNoise(galsim.CCDNoise(rng,
-                                           sky_level=0.0,
-                                           gain=float(const_cat["realgain"][0]),
-                                           read_noise=float(const_cat["ron"][0])))
-        
-                
+            gal_image.addNoise(galsim.CCDNoise(rng,
+                                               sky_level=0.0,
+                                               gain=float(const_cat["realgain"][0]),
+                                               read_noise=float(const_cat["ron"][0])))
+                     
         logger.info("Done with drawing, now writing output FITS files ...")        
 
         gal_image.write(filename)
