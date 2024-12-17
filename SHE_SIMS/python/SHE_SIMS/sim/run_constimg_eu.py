@@ -335,9 +335,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         #print(dir(galaxy_catalog))
         #print(type(galaxy_catalog))
         #print(galaxy_catalog.param_cat.dtype)
-      
-
-                
+     
         for row in catalog:
                 if profile_type == "Sersic":
                         if const_cat["snc_type"][0]==0:
@@ -615,8 +613,6 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         tru_gal_image[bounds]+= tru_gal_stamp[bounds]
                         
                         
-
-                                
         # And add noise to the convolved galaxy:
         if savetrugalimg:
                 logger.info("Saving image without noise")
@@ -639,12 +635,12 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
             # Adjusted skylevel = skylevel - 1.5190761753410986 * realgain
             gal_image+=(float(const_cat["sky_level"][0]) - 1.5190761753410986*float(const_cat["realgain"][0]))
             gal_image.addNoise(galsim.CCDNoise(rng,
-                 	                           sky_level=0.0,
-                   	                           gain=float(const_cat["realgain"][0]),
-                   	                           read_noise=float(const_cat["ron"][0])))
+                                               sky_level=0.0,
+                                               gain=float(const_cat["realgain"][0]),
+                                               read_noise=float(const_cat["ron"][0])))
 
         else:
-        	gal_image+=float(const_cat["sky_level"][0])
+            gal_image+=float(const_cat["sky_level"][0])
             gal_image.addNoise(galsim.CCDNoise(rng,
                                                sky_level=0.0,
                                                gain=float(const_cat["realgain"][0]),
