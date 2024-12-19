@@ -329,15 +329,13 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', exptime=float(const_cat["exptime"][0]), area=9926)
         elif profile_type == "CosmosParam":
                 cosmospath=os.path.join(cosmosdir, cosmoscatfile)
-                galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none',use_real='False', exptime=float(const_cat["exptime"][0]), area=9926)
-
+                galaxy_catalog = galsim.COSMOSCatalog(cosmospath, exclusion_level='none', use_real='False', exptime=float(const_cat["exptime"][0]), area=9926)
+        
         #print(galaxy_catalog)
         #print(dir(galaxy_catalog))
         #print(type(galaxy_catalog))
         #print(galaxy_catalog.param_cat.dtype)
-      
-
-                
+     
         for row in catalog:
                 if profile_type == "Sersic":
                         if const_cat["snc_type"][0]==0:
@@ -448,7 +446,8 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         sersic_values = galaxy_catalog.getValue('sersicfit', index)
                         sersic_pa_rad = float(sersic_values[7])
                         sersic_pa = sersic_pa_rad * (180 / np.pi)
-                        gal = galaxy_catalog.makeGalaxy(index, gal_type='real')
+                        gal = galaxy_catalog.makeGalaxy(index, gal_type='real', noise_pad_size=90.6*vispixelscale)
+                        
                         tru_theta = float(row["tru_theta"])
                         rot_angle = tru_theta - sersic_pa
                         gal = gal.rotate(rot_angle * galsim.degrees)                        
@@ -465,6 +464,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         sersic_values = galaxy_catalog.getValue('sersicfit', index)
                         sersic_pa_rad = float(sersic_values[7])
                         sersic_pa = sersic_pa_rad * (180 / np.pi)
+                                                
                         try:
                                 """
                                 if any([ val >1.5 for val in galaxy_catalog.getValue('hlr', index)[1:]]):
@@ -522,21 +522,17 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
                
                         if pixel_conv:
-                                if profile_type=="real":
-                                        stampsize=64
-                                        lowx=int(row["x"]-0.5*stampsize)+1
-                                        lowy=int(row["y"]-0.5*stampsize)+1
-                                        upperx=int(row["x"]+0.5*stampsize)
-                                        uppery=int(row["y"]+0.5*stampsize)
-                                        if lowx <=0 :lowx=1
-                                        if lowy <=0 :lowy=1
-                                        if upperx >imagesize :upperx =imagesize
-                                        if uppery >imagesize :uppery =imagesize
-                                        bounds = galsim.BoundsI(lowx,upperx , lowy , uppery )
-                                        stamp=gal_image[bounds]
-                                        galconv.drawImage(stamp, method="auto",offset=offset, add_to_image=True, scale=vispixelscale)
+                                if (profile_type == "CosmosReal" or profile_type == "CosmosParam"):    #stampsize=64
+                                        x_lower = int(row["x"] - 0.5*64)+1
+                                        x_upper = int(row["x"] + 0.5*64)
+                                        y_lower = int(row["y"] - 0.5*64)+1
+                                        y_upper = int(row["y"] + 0.5*64)
+                                        sub_image_bounds = galsim.BoundsI(x_lower, x_upper, y_lower, y_upper)                                      
+                                        sub_image_bounds = sub_image_bounds & gal_image.bounds
+                                        sub_image = gal_image[sub_image_bounds]
+                                        stamp = galconv.drawImage(image = sub_image,add_to_image=True, offset=offset, scale=vispixelscale)
                                 else:
-                                        stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
+                                	    stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
                         else:
                                 # This sould be used for psf image (interpolated) that already include the pixel response
                                 # if method auto were used extra convolution will be included
@@ -558,8 +554,9 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         logger.info("Out of bounds")
                         continue
                 
-                gal_image[bounds] += stamp[bounds]
-
+                if not (profile_type == "CosmosReal" or profile_type == "CosmosParam"):
+                	gal_image[bounds] += stamp[bounds]
+                
                 #vispixelscale=None
                 if savetrugalimg:
                         tru_gal_stamp=gal.drawImage(offset=offset, scale=vispixelscale)
@@ -616,8 +613,6 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         tru_gal_image[bounds]+= tru_gal_stamp[bounds]
                         
                         
-
-                                
         # And add noise to the convolved galaxy:
         if savetrugalimg:
                 logger.info("Saving image without noise")
@@ -632,19 +627,21 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         
                 
         # And add noise to the convolved galaxy:
-        if not profile_type == "CosmosReal":
-        	gal_image+=float(const_cat["sky_level"][0])
+        if profile_type == "CosmosReal":
+            # Correction: 
+            # Step 1: Measure mean skymad on COSMOS Real branch with no added skylevel or CCD noise. Measured skymad = 1.2325080832761701
+            # Step 2: Square this value, then multiply by the realgain. Squared mean skymad = 1.5190761753410986
+            # Step 3: Subtract final value from skylevel before applying to image.
+            # Adjusted skylevel = skylevel - 1.5190761753410986 * realgain
+            gal_image+=(float(const_cat["sky_level"][0]) - 1.5190761753410986*float(const_cat["realgain"][0]))
+            #gal_image+=(float(const_cat["sky_level"][0]) - 6.0)
         else:
-                logger.info('Correcting skylevel')
-                #gal_image+=(float(const_cat["sky_level"][0])*0.9948 - 3.3759)
-                gal_image+=(float(const_cat["sky_level"][0]) - 6.0)
+            gal_image+=float(const_cat["sky_level"][0])
         gal_image.addNoise(galsim.CCDNoise(rng,
                                            sky_level=0.0,
                                            gain=float(const_cat["realgain"][0]),
                                            read_noise=float(const_cat["ron"][0])))
-
-        # correct noise
-                
+        
         logger.info("Done with drawing, now writing output FITS files ...")        
 
         gal_image.write(filename)
