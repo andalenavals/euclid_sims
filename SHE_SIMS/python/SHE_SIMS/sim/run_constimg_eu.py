@@ -634,17 +634,13 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
             # Step 3: Subtract final value from skylevel before applying to image.
             # Adjusted skylevel = skylevel - 1.5190761753410986 * realgain
             gal_image+=(float(const_cat["sky_level"][0]) - 1.5190761753410986*float(const_cat["realgain"][0]))
-            gal_image.addNoise(galsim.CCDNoise(rng,
-                                               sky_level=0.0,
-                                               gain=float(const_cat["realgain"][0]),
-                                               read_noise=float(const_cat["ron"][0])))
-
+            #gal_image+=(float(const_cat["sky_level"][0]) - 6.0)
         else:
             gal_image+=float(const_cat["sky_level"][0])
-            gal_image.addNoise(galsim.CCDNoise(rng,
-                                               sky_level=0.0,
-                                               gain=float(const_cat["realgain"][0]),
-                                               read_noise=float(const_cat["ron"][0])))
+        gal_image.addNoise(galsim.CCDNoise(rng,
+                                           sky_level=0.0,
+                                           gain=float(const_cat["realgain"][0]),
+                                           read_noise=float(const_cat["ron"][0])))
         
         logger.info("Done with drawing, now writing output FITS files ...")        
 

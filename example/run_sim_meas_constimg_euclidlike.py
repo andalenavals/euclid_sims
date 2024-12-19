@@ -191,10 +191,10 @@ def group_measurements(filename, simdir, measdir, match_pairs, rot_pair, cols2d,
             filename = filename.replace(".fits", "_matchpairs.fits")
             SHE_SIMS.group.cats_constimg_rotpair(simdir, measdir, cols2d=cols2d,cols1d=cols1d, stars=stars, filename=filename, cattype=cattype)
         else:
-            #if rot_pair: filename = filename.replace('.fits', '_rotpair.fits')
-            #SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, rot_pair=rot_pair, stars=stars, cattype=cattype)
-            if rot_pair: filename = filename.replace('.fits', '_rotpaironly.fits')
-            SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, base_pair=False, rot_pair=rot_pair, stars=stars, cattype=cattype)
+            if rot_pair: filename = filename.replace('.fits', '_rotpair.fits')
+            SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, rot_pair=rot_pair, stars=stars, cattype=cattype)
+            #if rot_pair: filename = filename.replace('.fits', '_rotpaironly.fits')
+            #SHE_SIMS.group.cats_constimg(simdir, measdir, cols2d=cols2d,cols1d=cols1d, filename=filename, base_pair=False, rot_pair=rot_pair, stars=stars, cattype=cattype)
 
     #snr to the catalog
     SHE_SIMS.meas.snr.measfct(filename, gain=constants["realgain"], subsample_nbins=subsample_nbins)
@@ -355,7 +355,8 @@ def main():
             SHE_SIMS.meas.neighbors.add_ics(sexmeasdir,simdir, ext='_rot_cat.fits',ncpu=args.ncpu,skipdone=args.skipdone)
             
         
-    cols1d, cols2d, extracols=SHE_SIMS.utils.get_cols1d_cols2d_extracols(args.typegroup, args.cattype)     
+    cols1d, cols2d, extracols=SHE_SIMS.utils.get_cols1d_cols2d_extracols(args.typegroup, args.cattype)
+   
         
     if args.runadamom:        
         logger.info("Running adamom")
@@ -368,7 +369,7 @@ def main():
         print("used measkwargs")
         print(measkwargs)
         
-        #SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
+        SHE_SIMS.meas.run.adamom(simdir,adamomdir, measkwargs, sexdir=sexmeasdir, cattype=args.cattype, ncpu=args.ncpu,  skipdone=args.skipdone, rot_pair=args.rot_pair)
         if args.runneis:
             neicols=["adamom_sigma", "adamom_flux"]
             SHE_SIMS.meas.neighbors.measfct(adamomdir,ext='_meascat.fits', cols=neicols,  n_neis=2,xname ='adamom_x', yname='adamom_y', r_label='adamom_r', skipdone=args.skipdone, ncpu=args.ncpu )
