@@ -522,7 +522,21 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
                
                         if pixel_conv:
-                                stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
+                                if profile_type=="real":
+                                        stampsize=64
+                                        lowx=int(row["x"]-0.5*stampsize)+1
+                                        lowy=int(row["y"]-0.5*stampsize)+1
+                                        upperx=int(row["x"]+0.5*stampsize)
+                                        uppery=int(row["y"]+0.5*stampsize)
+                                        if lowx <=0 :lowx=1
+                                        if lowy <=0 :lowy=1
+                                        if upperx >imagesize :upperx =imagesize
+                                        if uppery >imagesize :uppery =imagesize
+                                        bounds = galsim.BoundsI(lowx,upperx , lowy , uppery )
+                                        stamp=gal_image[bounds]
+                                        galconv.drawImage(stamp, method="auto",offset=offset, add_to_image=True, scale=vispixelscale)
+                                else:
+                                        stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
                         else:
                                 # This sould be used for psf image (interpolated) that already include the pixel response
                                 # if method auto were used extra convolution will be included
@@ -621,7 +635,9 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
         if not profile_type == "CosmosReal":
         	gal_image+=float(const_cat["sky_level"][0])
         else:
-        	gal_image+=(float(const_cat["sky_level"][0])*0.9948 - 3.3759)
+                logger.info('Correcting skylevel')
+                #gal_image+=(float(const_cat["sky_level"][0])*0.9948 - 3.3759)
+                gal_image+=(float(const_cat["sky_level"][0]) - 6.0)
         gal_image.addNoise(galsim.CCDNoise(rng,
                                            sky_level=0.0,
                                            gain=float(const_cat["realgain"][0]),
