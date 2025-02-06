@@ -363,7 +363,8 @@ def main():
             SHE_SIMS.meas.neighbors.add_ics(sexmeasdir,simdir, ext='_rot_cat.fits',ncpu=args.ncpu,skipdone=args.skipdone)
             
         
-    cols1d, cols2d, extracols=SHE_SIMS.utils.get_cols1d_cols2d_extracols(args.typegroup, args.cattype)     
+    cols1d, cols2d, extracols=SHE_SIMS.utils.get_cols1d_cols2d_extracols(args.typegroup, args.cattype)
+   
         
     if args.runadamom:        
         logger.info("Running adamom")
