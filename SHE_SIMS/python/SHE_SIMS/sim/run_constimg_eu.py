@@ -443,28 +443,30 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
-                        sersic_values = galaxy_catalog.getValue('sersicfit', index)
-                        sersic_pa_rad = float(sersic_values[7])
-                        sersic_pa = sersic_pa_rad * (180 / np.pi)
                         gal = galaxy_catalog.makeGalaxy(index, gal_type='real', noise_pad_size=90.6*vispixelscale)
-                        
-                        tru_theta = float(row["tru_theta"])
-                        rot_angle = tru_theta - sersic_pa
-                        gal = gal.rotate(rot_angle * galsim.degrees)                        
+                        if align_cosmos:
+                            sersic_values = galaxy_catalog.getValue('sersicfit', index)
+                            sersic_pa_rad = float(sersic_values[7])
+                            sersic_pa = sersic_pa_rad * (180 / np.pi)                            
+                            tru_theta = float(row["tru_theta"])
+                            rot_angle =  tru_theta - sersic_pa
+                            if random_rot_cosmos:
+                                rot_180 = np.random.choice([True,False])
+                                if rot_180:
+                                    rot_angle=rot_angle+180
+                                #print(rot_180, (rot_angle-(tru_theta-sersic_pa))) #Should print (True, 180) or (False, 0) if working correctly. 
+                            gal = gal.rotate(rot_angle * galsim.degrees)                 
                                         
                 elif profile_type == "CosmosParam":
                         
                         '''
                         use_real=False prevents drawing images of real galaxies. Not necessary but used for optimization purposes.
                         '''
-                        if const_cat["snc_type"][0]==0:
+                         if const_cat["snc_type"][0]==0:
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
-                        sersic_values = galaxy_catalog.getValue('sersicfit', index)
-                        sersic_pa_rad = float(sersic_values[7])
-                        sersic_pa = sersic_pa_rad * (180 / np.pi)
-                                                
+                                              
                         try:
                                 """
                                 if any([ val >1.5 for val in galaxy_catalog.getValue('hlr', index)[1:]]):
@@ -480,9 +482,17 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 print(f"An error occurred:{e}")
                                 logger.info("Could not make parametric galaxy!!")
                                 continue
-                        tru_theta=float(row["tru_theta"])
-                        rot_angle = tru_theta - sersic_pa
-                        gal = gal.rotate(rot_angle * galsim.degrees)
+                        if align_cosmos:
+                            sersic_values = galaxy_catalog.getValue('sersicfit', index)
+                            sersic_pa_rad = float(sersic_values[7])
+                            sersic_pa = sersic_pa_rad * (180 / np.pi)                            
+                            tru_theta = float(row["tru_theta"])
+                            rot_angle =  tru_theta - sersic_pa
+                            if random_rot_cosmos:
+                                rot_180 = np.random.choice([True,False])
+                                rot_angle +=180 if rot_180 else rot_angle
+                                #print(rot_180, (rot_angle-tru_theta+sersic_pa)) #Should print (True, 180) or (False, 0) if working correctly. 
+                            gal = gal.rotate(rot_angle * galsim.degrees)
                 else:
                                                 
                         raise RuntimeError("Unknown galaxy profile!")
@@ -522,7 +532,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
                
                         if pixel_conv:
-                                if (profile_type == "CosmosReal" or profile_type == "CosmosParam"):    #stampsize=64
+                                if (profile_type == "CosmosReal"):    #stampsize=64
                                         x_lower = int(row["x"] - 0.5*64)+1
                                         x_upper = int(row["x"] + 0.5*64)
                                         y_lower = int(row["y"] - 0.5*64)+1
@@ -554,7 +564,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         logger.info("Out of bounds")
                         continue
                 
-                if not (profile_type == "CosmosReal" or profile_type == "CosmosParam"):
+                if not (profile_type == "CosmosReal"):
                 	gal_image[bounds] += stamp[bounds]
                 
                 #vispixelscale=None

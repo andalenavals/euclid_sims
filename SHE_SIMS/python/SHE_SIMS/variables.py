@@ -1,6 +1,6 @@
 import numpy as np
 
-GALCOLS=[ "tru_rad", "tru_sb", "tru_sersicn", "tru_flux","tru_g", "tru_mag"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]+["disk_angle","disk_scalelength","bulge_r50","disk_r50", "inclination_angle", "bulge_ellipticity", "bulge_nsersic", "tru_bulge_g", "bulge_axis_ratio"]
+GALCOLS=[ "tru_rad", "tru_sb", "tru_sersicn", "tru_flux","tru_g", "tru_mag"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]+["disk_angle","disk_scalelength","bulge_r50","disk_r50", "inclination_angle", "bulge_ellipticity", "bulge_nsersic", "tru_bulge_g", "bulge_axis_ratio"]+["cosmos_index"]
 STARCOLS=["star_flag","r_star", "star_flux", "star_mag"]
 
 SEXFEATS =["X_IMAGE", "Y_IMAGE", "XWIN_IMAGE", "YWIN_IMAGE", "MAG_AUTO", "SNR_WIN", "FLAGS", "FWHM_IMAGE", "FLUX_RADIUS","FLUX_WIN", "FLUX_AUTO", "FLUXERR_AUTO", "FLUXERR_WIN", "MAGERR_AUTO", "ELONGATION_WIN", "ELLIP_WIN", "ELLIP1_WIN", "ELLIP2_WIN", "ELLIP_AREA", "MAG_WIN",  "MAG_PSF", "PETRO_RADIUS", "KRON_RADIUS",  "SPREADERR_MODEL", "CLASS_STAR", ] +["ELONGATION","AWIN_IMAGE", "BWIN_IMAGE" , "THETAWIN_IMAGE", "ERRAWIN_IMAGE", "ERRBWIN_IMAGE", "ERRTHETAWIN_IMAGE" , "CXXWIN_IMAGE", "CYYWIN_IMAGE", "CXYWIN_IMAGE", "ERRCXXWIN_IMAGE", "ERRCYYWIN_IMAGE", "ERRCXYWIN_IMAGE" ]
