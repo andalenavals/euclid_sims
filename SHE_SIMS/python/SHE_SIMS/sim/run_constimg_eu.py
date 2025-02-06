@@ -490,7 +490,8 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                             rot_angle =  tru_theta - sersic_pa
                             if random_rot_cosmos:
                                 rot_180 = np.random.choice([True,False])
-                                rot_angle +=180 if rot_180 else rot_angle
+                                if rot_180:
+                                    rot_angle=rot_angle+180
                                 #print(rot_180, (rot_angle-tru_theta+sersic_pa)) #Should print (True, 180) or (False, 0) if working correctly. 
                             gal = gal.rotate(rot_angle * galsim.degrees)
                 else:
