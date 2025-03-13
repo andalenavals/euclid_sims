@@ -9,6 +9,10 @@ import pandas as pd
 from astropy.io import fits
 from datetime import datetime
 
+import photutils
+from photutils.aperture import CircularAperture, ApertureStats
+
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,9 @@ profiles=["Gaussian", "Sersic", "EBulgeDisk"]
 RLIST=[10,15,20,25,30]
 #STAMPSIZE=128
 #STAMPSIZE=70
-STAMPSIZE=64
+#STAMPSIZE=64
+STAMPSIZE=40
+REALGAIN=3.481514250204009
 #STAMPSIZE=32
 
 
@@ -187,8 +193,35 @@ def get_measure_array(catalog, img, img_seg, xname="x", yname="y", substractsky=
                 
 
                 adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]                        
-
                 fields_names=[ "adamom_%s"%(n) for n in  ["flux", "x", "y", "g1", "g2", "sigma", "rho4"] ]+["centroid_shift"]
+
+                positions=[(ada_x,ada_y)]
+                radii = [30] #[5,10,15,20,25,30]
+                error=photutils.utils.calc_total_error(gps.array, sky["std"], REALGAIN)
+                aper_data=[]
+                aper_names=[]
+                for r in radii:
+                        if gps_w is None: mask=None
+                        else: mask=np.isin(gps_w.array,  [0])
+                        aperstats = ApertureStats(gps.array, CircularAperture(positions, r=r*subsample_nbins), error=error, mask=mask)
+                        flux=aperstats.sum[0]
+                        flux_err=aperstats.sum_err[0]
+                        mad_std=aperstats.mad_std[0]
+                        cxx=aperstats.cxx
+                        cxy=aperstats.cxy
+                        cyy=aperstats.cyy
+                        elongation=aperstats.elongation
+                        gini=aperstats.gini[0]
+                        fwhm=aperstats.fwhm[0].value
+                        max=aperstats.max[0]
+                        std=aperstats.std[0]
+                        pars=[flux, flux_err, mad_std, cxx[0].value, cxy[0].value, cyy[0].value, elongation[0].value, gini, fwhm, max, std]
+                        aper_data+=pars
+                        aper_names+=['%s_r%i'%(st,r) for st in ['flux', 'flux_err', 'mad', 'cxx', 'cxy', 'cyy', 'elongation', 'gini','fwhm', 'max', 'std']]
+                adamom_list+=aper_data
+                fields_names+=aper_names
+
+                
                 if skystats:
                         sky_list=[sky["std"], sky["mad"], sky["mean"], sky["med"],sky["stampsum"]]
                         adamom_list+=sky_list
@@ -556,14 +589,43 @@ def measure_withsex(imgfile, catname, xname="XWIN_IMAGE", yname="YWIN_IMAGE", va
                 ada_rho4 = res.moments_rho4
 
                 centroid_shift=np.hypot(ada_x-x, ada_y-y)
+
                 
                 #saving only features if there were not failed measures
                 if ada_flux<0: continue
                 if ada_rho4<=-1: continue
                 
-                adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]                        
-
+                adamom_list=[ada_flux, ada_x, ada_y, ada_g1, ada_g2, ada_sigma, ada_rho4,centroid_shift]
                 fields_names=[ "adamom_%s"%(n) for n in  ["flux", "x", "y", "g1", "g2", "sigma", "rho4"] ]+["centroid_shift"]
+
+                positions=[(ada_x,ada_y)]
+                radii = [30] #[5,10,15,20,25,30]
+                error=photutils.utils.calc_total_error(gps.array, sky["std"], REALGAIN)
+                aper_data=[]
+                aper_names=[]
+                for r in radii:
+                        if gps_w is None: mask=None
+                        else: mask=np.isin(gps_w.array,  [0])
+                        aperstats = ApertureStats(gps.array, CircularAperture(positions, r=r*subsample_nbins), error=error, mask=mask)
+                        flux=aperstats.sum[0]
+                        flux_err=aperstats.sum_err[0]
+                        mad_std=aperstats.mad_std[0]
+                        cxx=aperstats.cxx
+                        cxy=aperstats.cxy
+                        cyy=aperstats.cyy
+                        elongation=aperstats.elongation
+                        gini=aperstats.gini[0]
+                        fwhm=aperstats.fwhm[0].value
+                        max=aperstats.max[0]
+                        std=aperstats.std[0]
+                        pars=[flux, flux_err, mad_std, cxx[0].value, cxy[0].value, cyy[0].value, elongation[0].value, gini, fwhm, max, std]
+                        aper_data+=pars
+                        aper_names+=['%s_r%i'%(st,r) for st in ['flux', 'flux_err', 'mad', 'cxx', 'cxy', 'cyy', 'elongation', 'gini','fwhm', 'max', 'std']]
+
+
+                adamom_list+=aper_data
+                fields_names+=aper_names
+                        
                 if skystats:
                         sky_list=[sky["std"], sky["mad"], sky["mean"], sky["med"],sky["stampsum"]]
                         adamom_list+=sky_list

@@ -551,7 +551,7 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
             tru_ada_sigma=inputres.moments_sigma
             '''
             
-            '''
+            
             try:
                 tru_ada_sigma=gal.withFlux(1.0).calculateHLR()
             except:
@@ -559,10 +559,12 @@ def measure_pairs(catid, row, constants, profile_type=2, npairs=1, subsample_nbi
                 couter+=patience
                 break
                 raise RuntimeError("Could not get the HLR from input galaxy")
-            '''
-            stampsize=64
+            
+            
             
             tru_ada_sigma=-1
+
+            stampsize=64
         
             gal = gal.lens(float(row["tru_s1"]), float(row["tru_s2"]), 1.0)
             xjitter = vispixelscale*(ud() - 0.5)
