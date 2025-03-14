@@ -1,13 +1,13 @@
 import numpy as np
 
-GALCOLS=[ "tru_rad", "tru_sb", "tru_sersicn", "tru_flux","tru_g", "tru_mag"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]+["disk_angle","disk_scalelength","bulge_r50","disk_r50", "inclination_angle", "bulge_ellipticity", "bulge_nsersic", "tru_bulge_g", "bulge_axis_ratio"]+["cosmos_index"]
+GALCOLS=[ "tru_rad", "tru_sb", "tru_sersicn", "tru_flux","tru_g", "tru_mag"]+["tru_bulge_flux","tru_disk_flux", "tru_bulge_rad","tru_disk_rad", "tru_disk_inclination", "tru_bulge_sersicn", "tru_disk_scaleheight", "dominant_shape"]+["disk_angle","disk_scalelength","bulge_r50","disk_r50", "inclination_angle", "bulge_ellipticity", "bulge_nsersic", "tru_bulge_g", "bulge_axis_ratio"] + ["cosmos_index", "flagship_index"]
 STARCOLS=["star_flag","r_star", "star_flux", "star_mag"]
 
 SEXFEATS =["X_IMAGE", "Y_IMAGE", "XWIN_IMAGE", "YWIN_IMAGE", "MAG_AUTO", "SNR_WIN", "FLAGS", "FWHM_IMAGE", "FLUX_RADIUS","FLUX_WIN", "FLUX_AUTO", "FLUXERR_AUTO", "FLUXERR_WIN", "MAGERR_AUTO", "ELONGATION_WIN", "ELLIP_WIN", "ELLIP1_WIN", "ELLIP2_WIN", "ELLIP_AREA", "MAG_WIN",  "MAG_PSF", "PETRO_RADIUS", "KRON_RADIUS",  "SPREADERR_MODEL", "CLASS_STAR", ] +["ELONGATION","AWIN_IMAGE", "BWIN_IMAGE" , "THETAWIN_IMAGE", "ERRAWIN_IMAGE", "ERRBWIN_IMAGE", "ERRTHETAWIN_IMAGE" , "CXXWIN_IMAGE", "CYYWIN_IMAGE", "CXYWIN_IMAGE", "ERRCXXWIN_IMAGE", "ERRCYYWIN_IMAGE", "ERRCXYWIN_IMAGE" ]
 
 PSFCOLS =  [ "%s%s"%("psf_adamom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4"]]+["quadrant", "ccd","z", "e1", "e2", "R2", "sed"]+[ "%s%s"%("psf_mom_", n) for n in ["flux", "g1", "g2", "sigma", "rho4", "M4_1","M4_2"]]
 
-MEASCOLS=["adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4", "x", "y"]]+["centroid_shift"]+['gal_density']+["skymad","snr"]+['psf_g1_ksb', 'psf_sigma_ksb', 'psf_g2_ksb']+["corr_s1","corr_s2"]+["ngmix_dx", "ngmix_dy","ngmix_e1", "ngmix_e2", "ngmix_T", "ngmix_flux" ]+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,""), "ngmix_%s_%s%s"%("fit",f,"corr")] for f in ["flags","T","T_err","s2n","g1","g2","g1_err","g2_err"]]).tolist()+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,"")] for f in ["flux","flux_err"]]).tolist() +["tru_adamom_sigma"]
+MEASCOLS=["adamom_%s"%(f) for f in ["flux","g1", "g2", "sigma", "rho4", "x", "y"]]+["centroid_shift"]+['gal_density']+["skymad","snr"]+['psf_g1_ksb', 'psf_sigma_ksb', 'psf_g2_ksb']+["corr_s1","corr_s2"]+["ngmix_dx", "ngmix_dy","ngmix_e1", "ngmix_e2", "ngmix_T", "ngmix_flux" ]+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,""), "ngmix_%s_%s%s"%("fit",f,"corr")] for f in ["flags","T","T_err","s2n","g1","g2","g1_err","g2_err"]]).tolist()+np.concatenate([[ "ngmix_%s_%s%s"%("moments",f,"corr"),"ngmix_%s_%s%s"%("moments",f,"")] for f in ["flux","flux_err"]]).tolist() +["tru_adamom_sigma"]+['%s_r%i'%(st,30) for st in ['flux', 'flux_err', 'mad', 'cxx', 'cxy', 'cyy', 'elongation', 'gini','fwhm', 'max', 'std']] + ["rad20", "rad80"]
        
 MATCHCOLS=["tru_rad_match", "tru_mag_match", "tru_r_n1_match", "r_match"]
 
@@ -17,7 +17,7 @@ neicols_sex=["SEX_R_n1", "SEX_R_n2", "SNR_WIN_n1", "SNR_WIN_n2", "MAG_AUTO_n1", 
 neicols_ada=["adamom_r_n1", "adamom_flux_n1", "adamom_sigma_n1"]+["adamom_r_n2", "adamom_flux_n2", "adamom_sigma_n2"]
 
 COLS1D=["tru_s1", "tru_s2", "tru_gal_density", "tru_sky_level", "sky_level", "tru_nstars"]
-COLS2D=['tru_g1', "tru_g2", "x", "y", "tru_theta"]+["tru_bulge_g1", "tru_bulge_g2"]
+COLS2D=['tru_g1', "tru_g2", "x", "y", "tru_theta"]+["tru_bulge_g1", "tru_bulge_g2"] 
 
 
 #COLS2D_PICKLE=COLS2D+["real_obj_id", "flag", "obj_id", "img_id"]+GALCOLS+STARCOLS+["subcase_id", "ICS", "ICS2"]+MATCHCOLS + SEXFEATS + PREDS + NEISCOLS + MEASCOLS +neicols_sex+neicols_ada+neicols_tru

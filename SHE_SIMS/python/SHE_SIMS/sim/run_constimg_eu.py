@@ -533,16 +533,17 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                
                         if pixel_conv:
                                 if (profile_type == "CosmosReal"):    #stampsize=64
-                                        x_lower = int(row["x"] - 0.5*64)+1
-                                        x_upper = int(row["x"] + 0.5*64)
-                                        y_lower = int(row["y"] - 0.5*64)+1
-                                        y_upper = int(row["y"] + 0.5*64)
+                                        stampsize=50
+                                        x_lower = int(row["x"] - 0.5*stampsize)+1
+                                        x_upper = int(row["x"] + 0.5*stampsize)
+                                        y_lower = int(row["y"] - 0.5*stampsize)+1
+                                        y_upper = int(row["y"] + 0.5*stampsize)
                                         sub_image_bounds = galsim.BoundsI(x_lower, x_upper, y_lower, y_upper)                                      
                                         sub_image_bounds = sub_image_bounds & gal_image.bounds
                                         sub_image = gal_image[sub_image_bounds]
                                         stamp = galconv.drawImage(image = sub_image,add_to_image=True, offset=offset, scale=vispixelscale)
                                 else:
-                                	    stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
+                                        stamp = galconv.drawImage(offset=offset, scale=vispixelscale)
                         else:
                                 # This sould be used for psf image (interpolated) that already include the pixel response
                                 # if method auto were used extra convolution will be included
