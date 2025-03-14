@@ -247,7 +247,7 @@ def drawcat(ngal=None, ngal_min=5, ngal_max=20, ngal_nbins=5, nstar=0, nstar_min
 
 
        
-def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True, cosmoscatfile=None, cosmosdir=None, tru_type=None):
+def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparams=None, sersiccut=None, savetrugalimg=False, savetrupsfimg=False, rot_pair=False, pixel_conv=False, constantshear=True, cosmoscatfile=None, cosmosdir=None, tru_type=None, align_cosmos=False, random_rot_cosmos=False):
         '''
         constantshear: flag to determine whether or not there is a variable shear in a image
         '''
@@ -443,14 +443,19 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
-                        sersic_values = galaxy_catalog.getValue('sersicfit', index)
-                        sersic_pa_rad = float(sersic_values[7])
-                        sersic_pa = sersic_pa_rad * (180 / np.pi)
                         gal = galaxy_catalog.makeGalaxy(index, gal_type='real', noise_pad_size=90.6*vispixelscale)
-                        
-                        tru_theta = float(row["tru_theta"])
-                        rot_angle = tru_theta - sersic_pa
-                        gal = gal.rotate(rot_angle * galsim.degrees)                        
+                        if align_cosmos:
+                            sersic_values = galaxy_catalog.getValue('sersicfit', index)
+                            sersic_pa_rad = float(sersic_values[7])
+                            sersic_pa = sersic_pa_rad * (180 / np.pi)                            
+                            tru_theta = float(row["tru_theta"])
+                            rot_angle =  tru_theta - sersic_pa
+                            if random_rot_cosmos:
+                                rot_180 = np.random.choice([True,False])
+                                if rot_180:
+                                    rot_angle=rot_angle+180
+                                #print(rot_180, (rot_angle-(tru_theta-sersic_pa))) #Should print (True, 180) or (False, 0) if working correctly. 
+                            gal = gal.rotate(rot_angle * galsim.degrees)                        
                                         
                 elif profile_type == "CosmosParam":
                         
@@ -461,10 +466,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 index=int(row['cosmos_index'])
                         else:
                                 index=int(const_cat['cosmos_index'][0])
-                        sersic_values = galaxy_catalog.getValue('sersicfit', index)
-                        sersic_pa_rad = float(sersic_values[7])
-                        sersic_pa = sersic_pa_rad * (180 / np.pi)
-                                                
+                                              
                         try:
                                 """
                                 if any([ val >1.5 for val in galaxy_catalog.getValue('hlr', index)[1:]]):
@@ -480,9 +482,17 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                                 print(f"An error occurred:{e}")
                                 logger.info("Could not make parametric galaxy!!")
                                 continue
-                        tru_theta=float(row["tru_theta"])
-                        rot_angle = tru_theta - sersic_pa
-                        gal = gal.rotate(rot_angle * galsim.degrees)
+                        if align_cosmos:
+                            sersic_values = galaxy_catalog.getValue('sersicfit', index)
+                            sersic_pa_rad = float(sersic_values[7])
+                            sersic_pa = sersic_pa_rad * (180 / np.pi)                            
+                            tru_theta = float(row["tru_theta"])
+                            rot_angle =  tru_theta - sersic_pa
+                            if random_rot_cosmos:
+                                rot_180 = np.random.choice([True,False])
+                                rot_angle +=180 if rot_180 else rot_angle
+                                #print(rot_180, (rot_angle-tru_theta+sersic_pa)) #Should print (True, 180) or (False, 0) if working correctly. 
+                            gal = gal.rotate(rot_angle * galsim.degrees)
                 else:
                                                 
                         raise RuntimeError("Unknown galaxy profile!")
@@ -522,7 +532,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
 
                
                         if pixel_conv:
-                                if (profile_type == "CosmosReal" or profile_type == "CosmosParam"):    #stampsize=64
+                                if (profile_type == "CosmosReal"):    #stampsize=64
                                         stampsize=50
                                         x_lower = int(row["x"] - 0.5*stampsize)+1
                                         x_upper = int(row["x"] + 0.5*stampsize)
@@ -555,7 +565,7 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                         logger.info("Out of bounds")
                         continue
                 
-                if not (profile_type == "CosmosReal" or profile_type == "CosmosParam"):
+                if not (profile_type == "CosmosReal"):
                 	gal_image[bounds] += stamp[bounds]
                 
                 #vispixelscale=None
@@ -629,14 +639,19 @@ def drawimg(catalog, const_cat, filename, starcatalog=None, psfimg=True, gsparam
                 
         # And add noise to the convolved galaxy:
         if profile_type == "CosmosReal":
-            # Correction: 
-            # Step 1: Measure mean skymad on COSMOS Real branch with no added skylevel or CCD noise. Measured skymad = 1.2325080832761701
-            # Step 2: Square this value, then multiply by the realgain. Squared mean skymad = 1.5190761753410986
-            # Step 3: Subtract final value from skylevel before applying to image.
-            # Adjusted skylevel = skylevel - 1.5190761753410986 * realgain
-            #gal_image+=(float(const_cat["sky_level"][0]) - 1.5190761753410986*float(const_cat["realgain"][0]))
-            #gal_image+=(float(const_cat["sky_level"][0]) - 9.0)
-            gal_image+=(float(const_cat["sky_level"][0]) - 6.2074)
+            '''
+            Correction: 
+            Step 1: Run COSMOS Real branch without correction, and Flagship branch.
+            Step 2: Group stamps by case, calculate the mean of variance of skymad for each case for both Real and Flagship.
+            Step 3: Fit the mean of variance for each case against applied skylevel for each case. var = m*sky_level + c
+            Step 4: Assume, for the Real branch, for a corrected sky level (sky_level_corrected), the variances will be equal.
+            Step 4: (cont.) (m_R)*(sky_level_corrected) + (c_R) = (m_F)*(sky_level) + (c_F)
+            Step 4: (cont.) Rearranging, (sky_level_corrected) = [(m_F)/(m_R)]*(sky_level) + [(c_F - c_R)/(m_R)]
+            Step 4: (cont.) [(m_F)/(m_R)] will approximately (~0.99...) be equal to 1. The shift value will then be given by [(c_F - c_R)/(m_R)].
+            Step 4: (cont.) These steps are reproducible and work for any drawn sample, but the value will be different for each sample.
+            Step 5: Subtract value from skylevel before applying to image.
+            '''
+            gal_image+=(float(const_cat["sky_level"][0])-5.33287)
         else:
             gal_image+=float(const_cat["sky_level"][0])
         gal_image.addNoise(galsim.CCDNoise(rng,

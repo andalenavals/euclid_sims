@@ -91,6 +91,14 @@ def parse_args():
     parser.add_argument('--scalefield',
                         default=None, 
                         help='Which field to scale. Sensitivity testing.')
+    parser.add_argument('--align_cosmos',
+                        default=False,
+                        action='store_const', const=True,
+                        help='Align Cosmos galaxies to Flagship position angles.')
+    parser.add_argument('--random_rot_cosmos',
+                        default=False,
+                        action='store_const', const=True,
+                        help='Rotate Cosmos galaxies by 180 deg based on outcome of a coin flip. Only works with align_cosmos')   
     
     
     # SEX ARGs
@@ -314,7 +322,7 @@ def main():
         #gsparams = galsim.GSParams(maximum_fft_size=100000)
         gsparams = None
         constantshear= not args.usevarshear
-        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile, "cosmosdir":args.cosmosdir}
+        drawimgkwargs={"psfimg":args.usepsfimg, "rot_pair":args.rot_pair, "pixel_conv":args.pixel_conv, "gsparams":gsparams, "constantshear":constantshear, "cosmoscatfile":args.cosmoscatfile, "cosmosdir":args.cosmosdir, "align_cosmos": args.align_cosmos, "random_rot_cosmos": args.random_rot_cosmos}
 
         #print("used drawcatkwargs")
         #print(drawcatkwargs)
